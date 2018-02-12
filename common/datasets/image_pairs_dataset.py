@@ -10,17 +10,24 @@ from .datasets_base import datasets_base
 class image_pairs_train(datasets_base):
     def __init__(self, dataset_a, dataset_b, flip=1, resize_to=280, crop_to=256):
         if os.path.isdir(dataset_a):
-            self.train_a_key = glob.glob(dataset_a + "/*.jpg")
-            self.train_a_key.append(glob.glob(dataset_a + "/*.png"))
+            self.train_a_key = []
+            self.train_a_key.extend(glob.glob(os.path.join(dataset_a, "*.jpg")))
+            self.train_a_key.extend(glob.glob(os.path.join(dataset_a, "*.png")))
+            if len(self.train_a_key) == 0:
+                print("No .jpg or .png file in " + dataset_a)
+                raise Exception
         elif dataset_a.lower().endswith(('.json')):
             with open(dataset_a,'r') as f:
                 self.train_a_key = json.load(f)
         else:
             self.train_a_key = []
-
         if os.path.isdir(dataset_b):
-            self.train_b_key = glob.glob(dataset_b + "/*.jpg")
-            self.train_b_key.append(glob.glob(dataset_b + "/*.png"))
+            self.train_b_key = []
+            self.train_b_key.extend(glob.glob(os.path.join(dataset_b, "*.jpg")))
+            self.train_b_key.extend(glob.glob(os.path.join(dataset_b, "*.png")))
+            if len(self.train_b_key) == 0:
+                print("No .jpg or .png file in " + dataset_b)
+                raise Exception
         elif dataset_a.lower().endswith(('.json')):
             with open(dataset_b,'r') as f:
                 self.train_b_key = json.load(f)
