@@ -7,6 +7,7 @@ from chainer import cuda, optimizers, serializers, Variable
 from chainer import function
 from chainer.utils import type_check
 from .backwards import *
+from common.instance_norm_v2 import InstanceNormalization
 
 def add_noise(h, sigma=0.2):
     xp = cuda.get_array_module(h.data)
@@ -21,39 +22,63 @@ def weight_clipping(model, lower=-0.01, upper=0.01):
         params.data = params_clipped.data
 
 class ResBlock(chainer.Chain):
-    def __init__(self, ch, bn=True, norm=None, activation=F.relu, k_size=3, w_init=None):
+    def __init__(self, ch, norm=None, activation=F.relu, k_size=3, w_init=None, nopadding = False, norm_learnable = True, normalize_grad = False):
         if w_init == None:
             w = chainer.initializers.HeNormal()
         else:
             w = w_init
-        if norm is not None:  # allow and prefer NNBlock's way to specify norm
-            bn = norm
-        self.bn = bn
+        if norm in ['instance','bn']:
+            use_norm = True
+        else:
+            use_norm = False
+        self.use_norm = use_norm
         self.activation = activation
         layers = {}
-        pad = k_size//2
+
+        self.nopadding = nopadding
+
+        if self.nopadding:
+            pad = 0
+        else:
+            pad = k_size//2
 
         layers['c0'] = L.Convolution2D(ch, ch, 3, 1, pad, initialW=w)
         layers['c1'] = L.Convolution2D(ch, ch, 3, 1, pad, initialW=w)
 
-        if isinstance(bn, tuple) and bn[0] == 'multi_node_bn':
-            import chainermn
-            comm = bn[1]
-            layers['bn0'] = chainermn.links.MultiNodeBatchNormalization(ch, comm)
-            layers['bn1'] = chainermn.links.MultiNodeBatchNormalization(ch, comm)
-        elif bn:  # works if bn == True or bn == 'bn'
-            layers['bn0'] = L.BatchNormalization(ch)
-            layers['bn1'] = L.BatchNormalization(ch)
+        # if isinstance(bn, tuple) and bn[0] == 'multi_node_bn':
+        #     import chainermn
+        #     comm = bn[1]
+        #     layers['bn0'] = chainermn.links.MultiNodeBatchNormalization(ch, comm)
+        #     layers['bn1'] = chainermn.links.MultiNodeBatchNormalization(ch, comm)
+        # elif bn:  # works if bn == True or bn == 'bn'
+        #     layers['bn0'] = L.BatchNormalization(ch)
+        #     layers['bn1'] = L.BatchNormalization(ch)
+
+        if self.use_norm:
+            if norm == 'instance':
+                layers['norm0'] = InstanceNormalization(ch, use_gamma=norm_learnable, use_beta=norm_learnable, norm_grad=normalize_grad)
+                layers['norm1'] = InstanceNormalization(ch, use_gamma=norm_learnable, use_beta=norm_learnable, norm_grad=normalize_grad)
+            elif norm == 'bn':
+                layers['norm0'] = L.BatchNormalization(ch, use_gamma=norm_learnable, use_beta=norm_learnable)
+                layers['norm1'] = L.BatchNormalization(ch, use_gamma=norm_learnable, use_beta=norm_learnable)
+
         super(ResBlock, self).__init__(**layers)
+        self.register_persistent('nopadding')
+        self.register_persistent('use_norm')
+        self.register_persistent('activation')
 
     def __call__(self, x):
         h = self.c0(x)
-        if self.bn:
-            h = self.bn0(h)
+        if self.use_norm:
+            h = self.norm0(h)
+        if isinstance(self.activation, np.ndarray):
+            self.activation = self.activation.reshape(1)[0]
         h = self.activation(h)
         h = self.c1(h)
-        if self.bn:
-            h = self.bn1(h)
+        if self.use_norm:
+            h = self.norm1(h)
+        if self.nopadding:
+            x = F.get_item(x,(slice(None),slice(None),slice(2,-2),slice(2,-2)))
         return h + x
 
 class DownResBlock(chainer.Chain):
@@ -99,13 +124,15 @@ class DownResBlock(chainer.Chain):
 class NNBlock(chainer.Chain):
     def __init__(self, ch0, ch1, \
                 nn='conv', \
-                norm='bn', \
+                norm=None, \
                 activation=F.relu, \
                 dropout=False, \
                 noise=None, \
                 w_init=None, \
                 k_size = 3, \
-                normalize_input=False ):
+                normalize_input=False,\
+                norm_learnable = True,\
+                normalize_grad = False):
 
         self.norm = norm
         self.normalize_input = normalize_input
@@ -113,6 +140,8 @@ class NNBlock(chainer.Chain):
         self.dropout = dropout
         self.noise = noise
         self.nn = nn
+        self.norm_learnable = norm_learnable
+        self.normalize_grad = normalize_grad
         layers = {}
 
         if w_init == None:
@@ -122,6 +151,9 @@ class NNBlock(chainer.Chain):
 
         if nn == 'down_conv':
             layers['c'] = L.Convolution2D(ch0, ch1, 4, 2, 1, initialW=w)
+
+        elif nn == 'g_down_conv':
+            layers['c'] = L.Convolution2D(ch0, ch1, 3, 2, 1, initialW=w)
 
         elif nn == 'up_deconv':
             layers['c'] = L.Deconvolution2D(ch0, ch1, 4, 2, 1, initialW=w)
@@ -145,6 +177,13 @@ class NNBlock(chainer.Chain):
                 layers['n'] = L.BatchNormalization(ch1, use_gamma=False)
             else:
                 layers['n'] = L.BatchNormalization(ch1)
+        elif self.norm == 'instance':
+            if self.noise:
+                layers['n'] = InstanceNormalization(ch1, use_gamma=False, use_beta=self.norm_learnable,\
+                                                    norm_grad = self.normalize_grad)
+            else:
+                layers['n'] = InstanceNormalization(ch1, use_gamma=self.norm_learnable, use_beta=self.norm_learnable,\
+                                                    norm_grad = self.normalize_grad)
         elif isinstance(self.norm, tuple) and self.norm[0] == 'multi_node_bn':
             import chainermn
             comm = self.norm[1]
@@ -156,11 +195,17 @@ class NNBlock(chainer.Chain):
                 layers['n'] = L.LayerNormalization(ch1)
 
         super(NNBlock, self).__init__(**layers)
+        self.register_persistent('normalize_input')
+        self.register_persistent('norm')
+        self.register_persistent('activation')
+        self.register_persistent('nn')
+        self.register_persistent('noise')
+        self.register_persistent('dropout')
 
     def _do_normalization(self, x, retain_forward=False):
-        if self.norm == 'bn' or self.norm == 'multi_node_bn':
+        if str(self.norm) in ['bn', 'instance','multi_node_bn']:
             return self.n(x)
-        elif self.norm == 'ln':
+        elif str(self.norm) == 'ln':
             y = self.n(x)
             if retain_forward:
                 self.nx = y
@@ -169,12 +214,12 @@ class NNBlock(chainer.Chain):
             return x
 
     def _do_before_cal(self, x):
-        if self.nn == 'up_unpooling':
+        if str(self.nn) == 'up_unpooling':
             x = F.unpooling_2d(x, 2, 2, 0, cover_all=False)
         return x
 
     def _do_after_cal_0(self, x):
-        if self.nn == 'up_subpixel':
+        if str(self.nn) == 'up_subpixel':
             x = F.depth2space(x, 2)
         return x
 
@@ -192,11 +237,13 @@ class NNBlock(chainer.Chain):
         x = self._do_before_cal(x)
         x = self.c(x)
         x = self._do_after_cal_0(x)
-        if not self.norm is None and not self.normalize_input:
+        if self.norm != None and not self.normalize_input:
             x = self._do_normalization(x, retain_forward=retain_forward)
         x = self._do_after_cal_1(x)
 
-        if not self.activation is None:
+        if self.activation != None:
+            if isinstance(self.activation,np.ndarray):
+                self.activation = self.activation.reshape(1)[0]
             x = self.activation(x)
 
         if retain_forward:
