@@ -25,10 +25,20 @@ def main():
     parser.add_argument('--eval_interval', type=int, default=400,
                         help='Interval of evaluating generator')
 
+    parser.add_argument('--snapshot_interval', type=int, default=4000,
+                        help='Interval of model snapshot')
+
     parser.add_argument("--learning_rate_g", type=float, default=0.0002,
                         help="Learning rate for generator")
     parser.add_argument("--learning_rate_d", type=float, default=0.0002,
                         help="Learning rate for discriminator")
+
+    parser.add_argument("--data_train_x", default='', help='path of train data of x')
+    parser.add_argument("--data_train_y", default='', help='path of train data of y')
+    parser.add_argument("--data_test_x", type=str, help='path of test data of x')
+    parser.add_argument("--data_test_y", type=str, help='path of test data of y')
+
+    parser.add_argument("--resume", type = str, help='trainer snapshot to be resumed')
 
     parser.add_argument("--load_gen_f_model", default='', help='load generator model')
     parser.add_argument("--load_gen_g_model", default='', help='load generator model')
@@ -85,12 +95,17 @@ def main():
     opt_x=make_adam(dis_x, lr=args.learning_rate_d, beta1=0.5)
     opt_y=make_adam(dis_y, lr=args.learning_rate_d, beta1=0.5)
 
-    train_dataset = datasets.image_pairs_train('darkskin_pos.json', 'darkskin_neg.json',
+    train_dataset = datasets.image_pairs_train(args.data_train_x, args.data_train_y,
             resize_to=args.resize_to, crop_to=args.crop_to)
     train_iter = chainer.iterators.MultiprocessIterator(
         train_dataset, args.batch_size, n_processes=4)
 
-    test_iter = chainer.iterators.SerialIterator(train_dataset, 1)
+    if args.data_test_x:
+        test_dataset = datasets.image_pairs_train(args.data_test_x, args.data_test_y,
+            resize_to=args.crop_to, crop_to=args.crop_to)
+        test_iter = chainer.iterators.SerialIterator(test_dataset, 1)
+    else:
+        test_iter = chainer.iterators.SerialIterator(train_dataset, 1)
 
     # Set up a trainer
     updater = Updater(
@@ -118,7 +133,7 @@ def main():
 
     trainer = training.Trainer(updater, (args.max_iter, 'iteration'), out=args.out)
 
-    model_save_interval = (4000, 'iteration')
+    model_save_interval = (args.snapshot_interval, 'iteration')
     trainer.extend(extensions.snapshot_object(
         gen_g, 'gen_g{.updater.iteration}.npz'), trigger=model_save_interval)
     trainer.extend(extensions.snapshot_object(
@@ -127,6 +142,8 @@ def main():
         dis_x, 'dis_x{.updater.iteration}.npz'), trigger=model_save_interval)
     trainer.extend(extensions.snapshot_object(
         dis_y, 'dis_y{.updater.iteration}.npz'), trigger=model_save_interval)
+
+    trainer.extend(extensions.snapshot(), trigger=model_save_interval)
 
     log_keys = ['epoch', 'iteration', 'gen_g/loss_rec', 'gen_f/loss_rec', 'gen_g/loss_adv',
                 'gen_f/loss_adv', 'dis_x/loss', 'dis_y/loss']
@@ -140,8 +157,11 @@ def main():
         cyclegan_sampling(gen_g, gen_f, test_iter, args.out+"/preview/", args.batch_size),
         trigger=eval_interval
     )
-    trainer.run()
 
+    if args.resume:
+        serializers.load_npz(args.resume, trainer)
+
+    trainer.run()
 
 if __name__ == '__main__':
     main()
