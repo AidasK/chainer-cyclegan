@@ -2,6 +2,7 @@ import numpy as np
 import chainer
 import chainer.functions as F
 import chainer.links as L
+import six
 from chainer import cuda, optimizers, serializers, Variable
 import sys
 sys.path.insert(0, '../')
@@ -29,6 +30,10 @@ class HistoricalBuffer():
             return data
         id = np.random.randint(0, self._buffer_size)
         return self._buffer[id, :].reshape((1, self._img_ch, self._img_size, self._img_size))
+
+    def serialize(self, serializer):
+        self._cnt = serializer('cnt', self._cnt)
+        self._buffer = serializer('buffer', self._buffer)
 
 class Updater(chainer.training.StandardUpdater):
 
@@ -135,3 +140,17 @@ class Updater(chainer.training.StandardUpdater):
                 opt_x.alpha -= self._learning_rate_anneal
             if opt_y.alpha > self._learning_rate_anneal:
                 opt_y.alpha -= self._learning_rate_anneal
+
+    def serialize(self, serializer):
+        """Serializes the current state of the updater object."""
+        for name, iterator in six.iteritems(self._iterators):
+            iterator.serialize(serializer['iterator:' + name])
+
+        for name, optimizer in six.iteritems(self._optimizers):
+            optimizer.serialize(serializer['optimizer:' + name])
+            optimizer.target.serialize(serializer['model:' + name])
+
+        self.iteration = serializer('iteration', self.iteration)
+
+        self._buffer_x.serialize(serializer['buffer_x'])
+        self._buffer_y.serialize(serializer['buffer_y'])
