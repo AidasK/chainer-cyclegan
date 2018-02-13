@@ -55,17 +55,21 @@ def main():
     parser.add_argument("--learning_rate_anneal_interval", type=int, default=1000, help='interval of learning rate anneal')
     parser.add_argument("--learning_rate_anneal_trigger", type=int, default=100000, help='trigger of learning rate anneal')
 
+    parser.add_argument("--norm", type=str, default='instance', choices = ['instance','bn','None'], help='normalization method')
+    parser.add_argument("--upsample", type=str, default='up_unpooling', choices=['up_unpooling', 'up_subpixel'],
+                        help='upsample method')
+    parser.add_argument("--reflect", action='store_true', help='flag of using reflect padding')
+
     args = parser.parse_args()
     print(args)
 
     if args.gpu >= 0:
         chainer.cuda.get_device(args.gpu).use()
 
-    gen_g = ResNetImageTransformer()
-    gen_f = ResNetImageTransformer()
+    gen_g = ResNetImageTransformer(norm_func=args.norm, upsampling=args.upsample, reflect=args.reflect)
+    gen_f = ResNetImageTransformer(norm_func=args.norm, upsampling=args.upsample, reflect=args.reflect)
     dis_x = DCGANDiscriminator(base_size=64, conv_as_last=True)
     dis_y = DCGANDiscriminator(base_size=64, conv_as_last=True)
-
 
     if args.load_gen_g_model != '':
         serializers.load_npz(args.load_gen_g_model, gen_g)
