@@ -54,7 +54,7 @@ class ResNetImageTransformer(chainer.Chain):
             layers['c_up_'+str(i)] = NNBlock(base, base//2, nn=upsampling, norm=norm, w_init=w, \
                                              norm_learnable=norm_learnable, normalize_grad=normalize_grad)
             base = base // 2
-        layers['c_last'] =  NNBlock(base, 3, nn='conv', k_size=7, norm=norm, w_init=w, activation=F.tanh, \
+        layers['c_last'] = NNBlock(base, 3, nn='conv', k_size=7, norm=None, w_init=w, activation=F.tanh, \
                                     norm_learnable=norm_learnable, normalize_grad=normalize_grad)
 
         super(ResNetImageTransformer, self).__init__(**layers)
