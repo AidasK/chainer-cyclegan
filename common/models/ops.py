@@ -22,7 +22,7 @@ def weight_clipping(model, lower=-0.01, upper=0.01):
         params.data = params_clipped.data
 
 class ResBlock(chainer.Chain):
-    def __init__(self, ch, norm=None, activation=F.relu, k_size=3, w_init=None, nopadding = False, norm_learnable = True, normalize_grad = False):
+    def __init__(self, ch, norm=None, activation=F.relu, k_size=3, w_init=None, reflect = 0, norm_learnable = True, normalize_grad = False):
         if w_init == None:
             w = chainer.initializers.HeNormal()
         else:
@@ -35,9 +35,10 @@ class ResBlock(chainer.Chain):
         self.activation = activation
         layers = {}
 
-        self.nopadding = nopadding
+        #self.nopadding = nopadding
+        self.reflect = reflect
 
-        if self.nopadding:
+        if self.reflect in [1,2]:
             pad = 0
         else:
             pad = k_size//2
@@ -63,21 +64,27 @@ class ResBlock(chainer.Chain):
                 layers['norm1'] = L.BatchNormalization(ch, use_gamma=norm_learnable, use_beta=norm_learnable)
 
         super(ResBlock, self).__init__(**layers)
-        self.register_persistent('nopadding')
+        self.register_persistent('reflect')
         self.register_persistent('use_norm')
         self.register_persistent('activation')
 
     def __call__(self, x):
-        h = self.c0(x)
+        if self.reflect == 2:
+            h = F.pad(x, ((0, 0), (0, 0), (1, 1), (1, 1)), mode='reflect')
+        else:
+            h = x
+        h = self.c0(h)
         if self.use_norm:
             h = self.norm0(h)
         if isinstance(self.activation, np.ndarray):
             self.activation = self.activation.reshape(1)[0]
         h = self.activation(h)
+        if self.reflect == 2:
+            h = F.pad(h, ((0, 0), (0, 0), (1, 1), (1, 1)), mode='reflect')
         h = self.c1(h)
         if self.use_norm:
             h = self.norm1(h)
-        if self.nopadding:
+        if self.reflect == 1:
             x = F.get_item(x,(slice(None),slice(None),slice(2,-2),slice(2,-2)))
         return h + x
 
@@ -130,6 +137,7 @@ class NNBlock(chainer.Chain):
                 noise=None, \
                 w_init=None, \
                 k_size = 3, \
+                pad = None, \
                 normalize_input=False,\
                 norm_learnable = True,\
                 normalize_grad = False):
@@ -152,6 +160,9 @@ class NNBlock(chainer.Chain):
         if nn == 'down_conv':
             layers['c'] = L.Convolution2D(ch0, ch1, 4, 2, 1, initialW=w)
 
+        elif nn == 'down_conv_2':
+            layers['c'] = L.Convolution2D(ch0, ch1, 4, 1, 1, initialW=w)
+
         elif nn == 'g_down_conv':
             layers['c'] = L.Convolution2D(ch0, ch1, 3, 2, 1, initialW=w)
 
@@ -163,7 +174,8 @@ class NNBlock(chainer.Chain):
             layers['c'] = L.Convolution2D(ch0, ch1*4, k_size, 1, pad, initialW=w)
 
         elif nn=='conv' or nn=='up_unpooling':
-            pad = k_size//2
+            if pad == None:
+                pad = k_size//2
             layers['c'] = L.Convolution2D(ch0, ch1, k_size, 1, pad, initialW=w)
 
         elif nn=='linear':
