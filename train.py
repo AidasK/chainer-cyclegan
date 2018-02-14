@@ -58,7 +58,7 @@ def main():
     parser.add_argument("--norm", type=str, default='instance', choices = ['instance','bn','None'], help='normalization method')
     parser.add_argument("--upsample", type=str, default='up_unpooling', choices=['up_unpooling', 'up_subpixel'],
                         help='upsample method')
-    parser.add_argument("--reflect", action='store_true', help='flag of using reflect padding')
+    parser.add_argument("--reflect", type=int, default=0, choices = [0,1,2], help='flag of using reflect padding - 0: non use, 1: at the begining, 2: each time')
 
     args = parser.parse_args()
     print(args)
