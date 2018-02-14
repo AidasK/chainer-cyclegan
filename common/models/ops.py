@@ -21,6 +21,45 @@ def weight_clipping(model, lower=-0.01, upper=0.01):
         params_clipped = F.clip(params, lower, upper)
         params.data = params_clipped.data
 
+def reflectPad(x, pad):
+    if pad < 0:
+        print("Pad width has to be 0 or larger")
+        raise ValueError
+    if pad == 0:
+        return x
+    else:
+        width, height = x.shape[2:]
+        w_pad = h_pad = pad
+        if width == 1:
+            x = F.concat((x,)*(1+pad*2),axis=2)
+        else:
+            while w_pad > 0:
+                pad = min(w_pad, width-1)
+                w_pad -= pad
+                head = F.get_item(x,(slice(None),slice(None),slice(1,1+pad),slice(None)))
+                head = F.concat([F.get_item(head,(slice(None),slice(None),slice(i,i+1),slice(None))) for i in range(pad)][::-1],axis=2)
+                tail = F.get_item(x,(slice(None),slice(None),slice(-1-pad,-1),slice(None)))
+                tail = F.concat(
+                    [F.get_item(tail, (slice(None), slice(None), slice(i,i+1), slice(None))) for i in range(pad)][::-1],
+                    axis=2)
+                x = F.concat((head,x,tail),axis=2)
+                width, height = x.shape[2:]
+        if height == 1:
+            x = F.concat((x,)*(1+pad*2),axis=3)
+        else:
+            while h_pad > 0:
+                pad = min(h_pad, height-1)
+                h_pad -= pad
+                head = F.get_item(x,(slice(None),slice(None),slice(None),slice(1,1+pad)))
+                head = F.concat([F.get_item(head,(slice(None),slice(None),slice(None),slice(i,i+1))) for i in range(pad)][::-1],axis=3)
+                tail = F.get_item(x,(slice(None),slice(None),slice(None),slice(-1-pad,-1)))
+                tail = F.concat(
+                    [F.get_item(tail, (slice(None), slice(None), slice(None), slice(i,i+1))) for i in range(pad)][::-1],
+                    axis=3)
+                x = F.concat((head,x,tail),axis=3)
+                width, height = x.shape[2:]
+        return x
+
 class ResBlock(chainer.Chain):
     def __init__(self, ch, norm=None, activation=F.relu, k_size=3, w_init=None, reflect = 0, norm_learnable = True, normalize_grad = False):
         if w_init == None:
@@ -97,7 +136,8 @@ class ResBlock(chainer.Chain):
 
     def __call__(self, x):
         if self.reflect == 2:
-            h = F.pad(x, ((0, 0), (0, 0), (1, 1), (1, 1)), mode='reflect')
+            # h = F.pad(x, ((0, 0), (0, 0), (1, 1), (1, 1)), mode='reflect')
+            h = reflectPad(x, 1)
         else:
             h = x
         h = self.c0(h)
@@ -105,7 +145,8 @@ class ResBlock(chainer.Chain):
             h = self.norm0(h)
         h = self.activation(h)
         if self.reflect == 2:
-            h = F.pad(h, ((0, 0), (0, 0), (1, 1), (1, 1)), mode='reflect')
+            # h = F.pad(h, ((0, 0), (0, 0), (1, 1), (1, 1)), mode='reflect')
+            h = reflectPad(h, 1)
         h = self.c1(h)
         if self.use_norm:
             h = self.norm1(h)
