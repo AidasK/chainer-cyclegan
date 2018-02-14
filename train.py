@@ -158,7 +158,7 @@ def main():
 
     eval_interval = (args.eval_interval, 'iteration')
     trainer.extend(
-        cyclegan_sampling(gen_g, gen_f, test_iter, args.out+"/preview/", args.batch_size),
+        cyclegan_sampling(gen_g, gen_f, test_iter, args.out+"/preview/", 1),
         trigger=eval_interval
     )
 
