@@ -68,6 +68,33 @@ class ResBlock(chainer.Chain):
         self.register_persistent('use_norm')
         self.register_persistent('activation')
 
+    #override serizalize to support serializing function object
+    def serialize(self, serializer):
+        """Serializes the link object.
+
+        Args:
+            serializer (~chainer.AbstractSerializer): Serializer object.
+
+        """
+        d = self.__dict__
+        for name in self._params:
+            param = d[name]
+            data = serializer(name, param.data)
+            if param.data is None and data is not None:
+                # Initialize the parameter here
+                param.initialize(data.shape)
+                if isinstance(param.data, np.ndarray):
+                    np.copyto(param.data, data)
+                else:
+                    param.data.set(np.asarray(data))
+        for name in self._persistent:
+            if isinstance(serializer,chainer.serializer.Deserializer) and name == "activation":
+                d[name] = None
+            d[name] = serializer(name, d[name])
+            if isinstance(serializer, chainer.serializer.Deserializer) and name == "activation":
+                if isinstance(d[name],np.ndarray):
+                    d[name] = d[name][()]
+
     def __call__(self, x):
         if self.reflect == 2:
             h = F.pad(x, ((0, 0), (0, 0), (1, 1), (1, 1)), mode='reflect')
@@ -76,8 +103,6 @@ class ResBlock(chainer.Chain):
         h = self.c0(h)
         if self.use_norm:
             h = self.norm0(h)
-        if isinstance(self.activation, np.ndarray):
-            self.activation = self.activation.reshape(1)[0]
         h = self.activation(h)
         if self.reflect == 2:
             h = F.pad(h, ((0, 0), (0, 0), (1, 1), (1, 1)), mode='reflect')
@@ -226,12 +251,12 @@ class NNBlock(chainer.Chain):
             return x
 
     def _do_before_cal(self, x):
-        if str(self.nn) == 'up_unpooling':
+        if self.nn == 'up_unpooling':
             x = F.unpooling_2d(x, 2, 2, 0, cover_all=False)
         return x
 
     def _do_after_cal_0(self, x):
-        if str(self.nn) == 'up_subpixel':
+        if self.nn == 'up_subpixel':
             x = F.depth2space(x, 2)
         return x
 
@@ -241,6 +266,32 @@ class NNBlock(chainer.Chain):
         if self.dropout:
             x = F.dropout(x)
         return x
+
+    def serialize(self, serializer):
+        """Serializes the link object.
+
+        Args:
+            serializer (~chainer.AbstractSerializer): Serializer object.
+
+        """
+        d = self.__dict__
+        for name in self._params:
+            param = d[name]
+            data = serializer(name, param.data)
+            if param.data is None and data is not None:
+                # Initialize the parameter here
+                param.initialize(data.shape)
+                if isinstance(param.data, np.ndarray):
+                    np.copyto(param.data, data)
+                else:
+                    param.data.set(np.asarray(data))
+        for name in self._persistent:
+            if isinstance(serializer,chainer.serializer.Deserializer) and name == "activation":
+                d[name] = None
+            d[name] = serializer(name, d[name])
+            if isinstance(serializer, chainer.serializer.Deserializer) and name == "activation":
+                if isinstance(d[name],np.ndarray):
+                    d[name] = d[name][()]
 
     def __call__(self, x, retain_forward=False):
         if self.normalize_input:
@@ -254,8 +305,6 @@ class NNBlock(chainer.Chain):
         x = self._do_after_cal_1(x)
 
         if self.activation != None:
-            if isinstance(self.activation,np.ndarray):
-                self.activation = self.activation.reshape(1)[0]
             x = self.activation(x)
 
         if retain_forward:

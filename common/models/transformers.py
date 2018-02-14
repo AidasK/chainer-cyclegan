@@ -69,6 +69,7 @@ class ResNetImageTransformer(chainer.Chain):
         self.register_persistent('reflect')
         self.register_persistent('down_layers')
         self.register_persistent('res_layers')
+        #self.register_persistent('up_layers')
 
     def __call__(self, x):
         if self.reflect == 1:
