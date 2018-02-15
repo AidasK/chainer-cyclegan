@@ -69,9 +69,17 @@ class ResNetImageTransformer(chainer.Chain):
         self.register_persistent('reflect')
         self.register_persistent('down_layers')
         self.register_persistent('res_layers')
-        #self.register_persistent('up_layers')
+        self.register_persistent('up_layers')
 
     def __call__(self, x):
+        if self.reflect == 2:
+            self.c_first.c.pad = (0, 0)
+            self.c_last.c.pad = (0, 0)
+        else:
+            _pad_f = self.c_first.c.W.shape[2] // 2
+            _pad_l = self.c_last.c.W.shape[2] // 2
+            self.c_first.c.pad = (_pad_f, _pad_f)
+            self.c_last.c.pad = (_pad_l, _pad_l)
         if self.reflect == 1:
             reflect_pad = 2**self.down_layers * 4 * self.res_layers // 2
             # x = F.pad(x,((0,0),(0,0),(reflect_pad,reflect_pad),(reflect_pad,reflect_pad)),mode='reflect')
@@ -79,6 +87,8 @@ class ResNetImageTransformer(chainer.Chain):
         elif self.reflect == 2:
             # x = F.pad(x, ((0, 0), (0, 0), (3, 3), (3, 3)), mode='reflect')
             x = reflectPad(x, 3)
+        # _pair = self.c_fisrt._pair
+        # self.c_first.pad = _pair(3) if self.reflect == 0 else _pair(0)
         h = self.c_first(x)
         for i in range(self.down_layers):
             h = getattr(self, 'c_down_'+str(i))(h)
@@ -89,5 +99,6 @@ class ResNetImageTransformer(chainer.Chain):
         if self.reflect == 2:
             # h = F.pad(h, ((0, 0), (0, 0), (3, 3), (3, 3)), mode='reflect')
             h = reflectPad(h, 3)
+        # self.c_last.pad = _pair(3) if self.reflect == 0 else _pair(0)
         h = self.c_last(h)
         return h

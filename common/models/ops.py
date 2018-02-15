@@ -36,13 +36,7 @@ def reflectPad(x, pad):
             while w_pad > 0:
                 pad = min(w_pad, width-1)
                 w_pad -= pad
-                head = F.get_item(x,(slice(None),slice(None),slice(1,1+pad),slice(None)))
-                head = F.concat([F.get_item(head,(slice(None),slice(None),slice(i,i+1),slice(None))) for i in range(pad)][::-1],axis=2)
-                tail = F.get_item(x,(slice(None),slice(None),slice(-1-pad,-1),slice(None)))
-                tail = F.concat(
-                    [F.get_item(tail, (slice(None), slice(None), slice(i,i+1), slice(None))) for i in range(pad)][::-1],
-                    axis=2)
-                x = F.concat((head,x,tail),axis=2)
+                x = _pad_along_axis(x, pad, 2)
                 width, height = x.shape[2:]
         if height == 1:
             x = F.concat((x,)*(1+pad*2),axis=3)
@@ -50,15 +44,24 @@ def reflectPad(x, pad):
             while h_pad > 0:
                 pad = min(h_pad, height-1)
                 h_pad -= pad
-                head = F.get_item(x,(slice(None),slice(None),slice(None),slice(1,1+pad)))
-                head = F.concat([F.get_item(head,(slice(None),slice(None),slice(None),slice(i,i+1))) for i in range(pad)][::-1],axis=3)
-                tail = F.get_item(x,(slice(None),slice(None),slice(None),slice(-1-pad,-1)))
-                tail = F.concat(
-                    [F.get_item(tail, (slice(None), slice(None), slice(None), slice(i,i+1))) for i in range(pad)][::-1],
-                    axis=3)
-                x = F.concat((head,x,tail),axis=3)
+                x = _pad_along_axis(x, pad, 3)
                 width, height = x.shape[2:]
         return x
+
+def _pad_along_axis(x, pad, axis):
+    dim = x.ndim
+    head = F.get_item(x,(slice(None),) * axis + (slice(1, 1 + pad),) + (slice(None),)*(dim-1-axis))
+    head = F.concat(
+        [F.get_item(head, (slice(None),) * axis + (slice(i, i + 1),) + (slice(None),)*(dim-1-axis)) for i in range(pad)][::-1], axis=axis)
+    tail = F.get_item(x, (slice(None),) * axis + (slice(-1-pad, -1),) + (slice(None),)*(dim-1-axis))
+    tail = F.concat(
+        [F.get_item(tail, (slice(None),) * axis + (slice(i, i + 1),) + (slice(None),)*(dim-1-axis)) for i in range(pad)][::-1],
+        axis=axis)
+    x = F.concat((head, x, tail), axis=axis)
+    return x
+
+
+
 
 class ResBlock(chainer.Chain):
     def __init__(self, ch, norm=None, activation=F.relu, k_size=3, w_init=None, reflect = 0, norm_learnable = True, normalize_grad = False):
@@ -135,6 +138,13 @@ class ResBlock(chainer.Chain):
                     d[name] = d[name][()]
 
     def __call__(self, x):
+        if self.reflect == 0:
+            _pad = self.c0.W.shape[2] // 2
+            self.c0.pad = (_pad, _pad)
+            self.c1.pad = (_pad, _pad)
+        else:
+            self.c0.pad = (0,0)
+            self.c1.pad = (0,0)
         if self.reflect == 2:
             # h = F.pad(x, ((0, 0), (0, 0), (1, 1), (1, 1)), mode='reflect')
             h = reflectPad(x, 1)
