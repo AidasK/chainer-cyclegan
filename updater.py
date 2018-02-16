@@ -43,6 +43,7 @@ class Updater(chainer.training.StandardUpdater):
         params = kwargs.pop('params')
         self._lambda1 = params['lambda1']
         self._lambda2 = params['lambda2']
+        self._lambda_idt = params['lambda_idt']
         self._learning_rate_anneal = params['learning_rate_anneal']
         self._learning_rate_anneal_interval = params['learning_rate_anneal_interval']
         self._learning_rate_anneal_trigger = params['learning_rate_anneal_trigger']
@@ -91,25 +92,7 @@ class Updater(chainer.training.StandardUpdater):
         opt_x = self.get_optimizer('dis_x')
         opt_y = self.get_optimizer('dis_y')
 
-        self.dis_y.cleargrads()
-        self.dis_x.cleargrads()
-
-        loss_dis_y_fake = loss_func_lsgan_dis_fake(self.dis_y(x_y_copy))
-        loss_dis_y_real = loss_func_lsgan_dis_real(self.dis_y(y))
-        loss_dis_y = loss_dis_y_fake + loss_dis_y_real
-        chainer.report({'loss': loss_dis_y}, self.dis_y)
-
-        loss_dis_x_fake = loss_func_lsgan_dis_fake(self.dis_x(y_x_copy))
-        loss_dis_x_real = loss_func_lsgan_dis_real(self.dis_x(x))
-        loss_dis_x = loss_dis_x_fake + loss_dis_x_real
-        chainer.report({'loss': loss_dis_x}, self.dis_x)
-
-        loss_dis_y.backward()
-        loss_dis_x.backward()
-
-        opt_y.update()
-        opt_x.update()
-
+        #transformer optimizing
         self.gen_f.cleargrads()
         self.gen_g.cleargrads()
 
@@ -118,16 +101,49 @@ class Updater(chainer.training.StandardUpdater):
         loss_cycle_x = self._lambda1 * loss_l1(x_y_x, x)
         loss_cycle_y = self._lambda1 * loss_l1(y_x_y, y)
 
+        if self._lambda_idt > 0:
+            idtY = self.gen_g(y)
+            loss_idtY = F.sum(F.absolute_error(idtY,y)) / np.prod(idtY.shape)
+            idtX = self.gen_f(x)
+            loss_idtX = F.sum(F.absolute_error(idtX, x)) / np.prod(idtX.shape)
+            loss_idt = (loss_idtX + loss_idtY) * self._lambda_idt
+        else:
+            loss_idtY = 0
+            loss_idtX = 0
+            loss_idt = 0
+
         chainer.report({'loss_rec': loss_cycle_y}, self.gen_g)
         chainer.report({'loss_rec': loss_cycle_x}, self.gen_f)
         chainer.report({'loss_adv': loss_gen_g_adv}, self.gen_g)
         chainer.report({'loss_adv': loss_gen_f_adv}, self.gen_f)
+        chainer.report({'loss_idt': loss_idtY}, self.gen_g)
+        chainer.report({'loss_idt': loss_idtX}, self.gen_f)
 
-        loss_gen = loss_gen_g_adv + loss_gen_f_adv + loss_cycle_x + loss_cycle_y
+        loss_gen = loss_gen_g_adv + loss_gen_f_adv + loss_cycle_x + loss_cycle_y + loss_idt
         loss_gen.backward()
 
         opt_f.update()
         opt_g.update()
+
+        # dicriminator optimizing
+        self.dis_y.cleargrads()
+        self.dis_x.cleargrads()
+
+        loss_dis_y_fake = loss_func_lsgan_dis_fake(self.dis_y(x_y_copy))
+        loss_dis_y_real = loss_func_lsgan_dis_real(self.dis_y(y))
+        loss_dis_y = (loss_dis_y_fake + loss_dis_y_real) * 0.5
+        chainer.report({'loss': loss_dis_y}, self.dis_y)
+
+        loss_dis_x_fake = loss_func_lsgan_dis_fake(self.dis_x(y_x_copy))
+        loss_dis_x_real = loss_func_lsgan_dis_real(self.dis_x(x))
+        loss_dis_x = (loss_dis_x_fake + loss_dis_x_real) * 0.5
+        chainer.report({'loss': loss_dis_x}, self.dis_x)
+
+        loss_dis_y.backward()
+        loss_dis_x.backward()
+
+        opt_y.update()
+        opt_x.update()
 
         if self._iter >= self._learning_rate_anneal_trigger and \
                 self._learning_rate_anneal > 0 and \
