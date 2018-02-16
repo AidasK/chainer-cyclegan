@@ -17,10 +17,10 @@ def loss_func_dcgan_dis_real(y_real):
 def loss_func_dcgan_dis_fake(y_fake):
     return F.sum(F.softplus(y_fake)) / np.prod(y_fake.data.shape)
 
-def loss_func_lsgan_dis_real(y_real, label=0.9):
+def loss_func_lsgan_dis_real(y_real, label=1.0):
     return loss_l2(y_real, label)
 
-def loss_func_lsgan_dis_fake(y_fake, label=0.1):
+def loss_func_lsgan_dis_fake(y_fake, label=0.0):
     return loss_l2(y_fake, label)
 
 def loss_func_tv_l1(x_out):
