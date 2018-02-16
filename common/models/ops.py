@@ -291,9 +291,9 @@ class NNBlock(chainer.Chain):
         self.register_persistent('dropout')
 
     def _do_normalization(self, x, retain_forward=False):
-        if str(self.norm) in ['bn', 'instance','multi_node_bn']:
+        if self.norm in ['bn', 'instance','multi_node_bn']:
             return self.n(x)
-        elif str(self.norm) == 'ln':
+        elif self.norm == 'ln':
             y = self.n(x)
             if retain_forward:
                 self.nx = y
