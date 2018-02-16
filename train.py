@@ -49,7 +49,8 @@ def main():
     parser.add_argument("--crop_to", type=int, default=256, help='crop the resized image to')
 
     parser.add_argument("--lambda1", type=float, default=10.0, help='lambda for reconstruction loss')
-    parser.add_argument("--lambda2", type=float, default=3.0, help='lambda for adversarial loss')
+    parser.add_argument("--lambda2", type=float, default=1.0, help='lambda for adversarial loss')
+    parser.add_argument("--lambda_idt", type=float, default=0.5, help='lambda for identity mapping loss')
 
     parser.add_argument("--learning_rate_anneal", type=float, default=0.000002, help='anneal the learning rate')
     parser.add_argument("--learning_rate_anneal_interval", type=int, default=1000, help='interval of learning rate anneal')
@@ -128,6 +129,7 @@ def main():
         params={
             'lambda1': args.lambda1,
             'lambda2': args.lambda2,
+            'lambda_idt': args.lambda_idt,
             'image_size' : args.crop_to,
             'buffer_size' : 50,
             'learning_rate_anneal' : args.learning_rate_anneal,
@@ -150,7 +152,7 @@ def main():
     trainer.extend(extensions.snapshot(), trigger=model_save_interval)
 
     log_keys = ['epoch', 'iteration', 'gen_g/loss_rec', 'gen_f/loss_rec', 'gen_g/loss_adv',
-                'gen_f/loss_adv', 'dis_x/loss', 'dis_y/loss']
+                'gen_f/loss_adv', 'gen_g/loss_idt', 'gen_f/loss_idt', 'dis_x/loss', 'dis_y/loss']
 
     trainer.extend(extensions.LogReport(keys=log_keys, trigger=(20, 'iteration')))
     trainer.extend(extensions.PrintReport(log_keys), trigger=(20, 'iteration'))
