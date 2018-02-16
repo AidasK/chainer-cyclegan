@@ -35,14 +35,22 @@ class image_pairs_train(datasets_base):
             self.train_b_key = []
 
         super(image_pairs_train, self).__init__(flip=flip, resize_to=resize_to, crop_to=crop_to, keep_aspect_ratio=True)
+        self.epoch = 0
 
     def __len__(self):
         return min(len(self.train_a_key), len(self.train_b_key))
 
     def get_example(self, i):
-        np.random.seed(None)
-        idA = self.train_a_key[np.random.randint(0, len(self.train_a_key))]
-        idB = self.train_b_key[np.random.randint(0, len(self.train_b_key))]
+        #np.random.seed(None)
+        #idA = self.train_a_key[np.random.randint(0, len(self.train_a_key))]
+        idA = self.train_a_key[i % len(self.train_a_key)]
+        #idB = self.train_b_key[np.random.randint(0, len(self.train_b_key))]
+        current_epoch = i // len(self.train_b_key)
+        if current_epoch > self.epoch:
+            self.epoch = current_epoch
+            import random
+            random.shuffle(self.train_b_key)
+        idB = self.train_b_key[i%len(self.train_b_key)]
         #print(idA)
 
         imgA = cv2.imread(idA, cv2.IMREAD_COLOR)
