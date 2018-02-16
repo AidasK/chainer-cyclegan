@@ -28,6 +28,8 @@ class image_pairs_train(datasets_base):
             if len(self.train_b_key) == 0:
                 print("No .jpg or .png file in " + dataset_b)
                 raise Exception
+            import random
+            random.shuffle(self.train_b_key)
         elif dataset_a.lower().endswith(('.json')):
             with open(dataset_b,'r') as f:
                 self.train_b_key = json.load(f)
