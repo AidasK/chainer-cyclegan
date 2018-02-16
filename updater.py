@@ -106,7 +106,7 @@ class Updater(chainer.training.StandardUpdater):
             loss_idtY = F.sum(F.absolute_error(idtY,y)) / np.prod(idtY.shape)
             idtX = self.gen_f(x)
             loss_idtX = F.sum(F.absolute_error(idtX, x)) / np.prod(idtX.shape)
-            loss_idt = (loss_idtX + loss_idtY) * self._lambda_idt
+            loss_idt = (loss_idtX + loss_idtY) * self._lambda1 * self._lambda_idt
         else:
             loss_idtY = 0
             loss_idtX = 0
