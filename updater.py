@@ -67,7 +67,10 @@ class HistoricalBuffer():
 class Updater(chainer.training.StandardUpdater):
 
     def __init__(self, *args, **kwargs):
-        self.gen_g, self.gen_f, self.dis_x, self.dis_y = kwargs.pop('models')
+        models = kwargs.pop('models')
+        # for m in models:
+        #     m.cleargrads()
+        self.gen_g, self.gen_f, self.dis_x, self.dis_y = models
         self._iter = 0
         params = kwargs.pop('params')
         self._lambda1 = params['lambda1']
@@ -78,6 +81,8 @@ class Updater(chainer.training.StandardUpdater):
         self._learning_rate_anneal_trigger = params['learning_rate_anneal_trigger']
         self._image_size = params['image_size']
         self._max_buffer_size = params['buffer_size']
+        self._cfmap_loss = params['cfmap_loss']
+        self._lambda_cfmap = params['lambda_cfmap']
 
         # xp = self.gen_g.xp
         self._buffer_x = HistoricalBuffer(self._max_buffer_size, self._image_size)
@@ -130,6 +135,19 @@ class Updater(chainer.training.StandardUpdater):
         loss_cycle_x = self._lambda1 * loss_l1(x_y_x, x)
         loss_cycle_y = self._lambda1 * loss_l1(y_x_y, y)
 
+        if self._cfmap_loss in [0,2]:
+            loss_cfmap_X = F.mean_squared_error(self.dis_y(x), self.dis_x(x_y)) * self._lambda_cfmap
+            loss_cfmap_Y = F.mean_squared_error(self.dis_x(y), self.dis_y(y_x)) * self._lambda_cfmap
+            loss_cfmap_gen = loss_cfmap_X + loss_cfmap_X
+        else:
+            loss_cfmap_gen = 0
+        if self._cfmap_loss in [1, 2]:
+            loss_cfmap_X = F.mean_squared_error(self.dis_y(x.data), self.dis_x(x_y.data)) * self._lambda_cfmap
+            loss_cfmap_Y = F.mean_squared_error(self.dis_x(y.data), self.dis_y(y_x.data)) * self._lambda_cfmap
+            loss_cfmap_dis = (loss_cfmap_X + loss_cfmap_X) * 0.5
+        else:
+            loss_cfmap_dis = 0
+
         if self._lambda_idt > 0:
             idtY = self.gen_g(y)
             loss_idtY = F.sum(F.absolute_error(idtY,y)) / np.prod(idtY.shape)
@@ -147,12 +165,16 @@ class Updater(chainer.training.StandardUpdater):
         chainer.report({'loss_adv': loss_gen_f_adv}, self.gen_f)
         chainer.report({'loss_idt': loss_idtY}, self.gen_g)
         chainer.report({'loss_idt': loss_idtX}, self.gen_f)
+        if self._cfmap_loss != None:
+            chainer.report({'loss_cfmap_X': loss_cfmap_X})
+            chainer.report({'loss_cfmap_Y': loss_cfmap_Y})
 
-        loss_gen = loss_gen_g_adv + loss_gen_f_adv + loss_cycle_x + loss_cycle_y + loss_idt
+        loss_gen = loss_gen_g_adv + loss_gen_f_adv + loss_cycle_x + loss_cycle_y + loss_idt + loss_cfmap_gen
         loss_gen.backward()
 
         opt_f.update()
         opt_g.update()
+
 
         # dicriminator optimizing
         self.dis_y.cleargrads()
@@ -166,13 +188,20 @@ class Updater(chainer.training.StandardUpdater):
         loss_dis_x_fake = loss_func_lsgan_dis_fake(self.dis_x(y_x_copy))
         loss_dis_x_real = loss_func_lsgan_dis_real(self.dis_x(x))
         loss_dis_x = (loss_dis_x_fake + loss_dis_x_real) * 0.5
+
         chainer.report({'loss': loss_dis_x}, self.dis_x)
 
         loss_dis_y.backward()
         loss_dis_x.backward()
 
+        if isinstance(loss_cfmap_dis, Variable):
+            loss_cfmap_dis.backward()
+
         opt_y.update()
         opt_x.update()
+
+        # self.dis_y.cleargrads()
+        # self.dis_x.cleargrads()
 
         if self._iter >= self._learning_rate_anneal_trigger and \
                 self._learning_rate_anneal > 0 and \

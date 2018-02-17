@@ -52,6 +52,11 @@ def main():
     parser.add_argument("--lambda2", type=float, default=1.0, help='lambda for adversarial loss')
     parser.add_argument("--lambda_idt", type=float, default=0.5, help='lambda for identity mapping loss')
 
+    parser.add_argument("--cfmap_loss", type=int, choices = [0,1,2], help='use of cfmap loss 0: train gen, 1: train dis, 2: train both')
+    parser.add_argument("--lambda_cfmap", type=float, default=1.0,
+                        help='lambda for cfmap loss')
+
+
     parser.add_argument("--learning_rate_anneal", type=float, default=0.000002, help='anneal the learning rate')
     parser.add_argument("--learning_rate_anneal_interval", type=int, default=1000, help='interval of learning rate anneal')
     parser.add_argument("--learning_rate_anneal_trigger", type=int, default=100000, help='trigger of learning rate anneal')
@@ -135,7 +140,10 @@ def main():
             'learning_rate_anneal' : args.learning_rate_anneal,
             'learning_rate_anneal_trigger' : args.learning_rate_anneal_trigger,
             'learning_rate_anneal_interval' : args.learning_rate_anneal_interval,
+            'cfmap_loss' : args.cfmap_loss,
+            'lambda_cfmap' : args.lambda_cfmap,
         })
+
 
     trainer = training.Trainer(updater, (args.max_iter, 'iteration'), out=args.out)
 
@@ -153,6 +161,8 @@ def main():
 
     log_keys = ['epoch', 'iteration', 'gen_g/loss_rec', 'gen_f/loss_rec', 'gen_g/loss_adv',
                 'gen_f/loss_adv', 'gen_g/loss_idt', 'gen_f/loss_idt', 'dis_x/loss', 'dis_y/loss']
+    if args.cfmap_loss != None:
+        log_keys += ['loss_cfmap_X', 'loss_cfmap_Y']
 
     trainer.extend(extensions.LogReport(keys=log_keys, trigger=(20, 'iteration')))
     trainer.extend(extensions.PrintReport(log_keys), trigger=(20, 'iteration'))
