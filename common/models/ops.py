@@ -110,7 +110,7 @@ class ResBlock(chainer.Chain):
         self.register_persistent('use_norm')
         self.register_persistent('activation')
 
-    #override serizalize to support serializing function object
+    # override serialize() to support serializing function object
     def serialize(self, serializer):
         """Serializes the link object.
 
@@ -136,6 +136,9 @@ class ResBlock(chainer.Chain):
             if isinstance(serializer, chainer.serializer.Deserializer) and name == "activation":
                 if isinstance(d[name],np.ndarray):
                     d[name] = d[name][()]
+        d = self.__dict__
+        for name in self._children:
+            d[name].serialize(serializer[name])
 
     def __call__(self, x):
         if self.reflect == 0:
@@ -318,6 +321,7 @@ class NNBlock(chainer.Chain):
             x = F.dropout(x)
         return x
 
+    # override serialize() to support serializing function object
     def serialize(self, serializer):
         """Serializes the link object.
 
@@ -343,6 +347,9 @@ class NNBlock(chainer.Chain):
             if isinstance(serializer, chainer.serializer.Deserializer) and name == "activation":
                 if isinstance(d[name],np.ndarray):
                     d[name] = d[name][()]
+        d = self.__dict__
+        for name in self._children:
+            d[name].serialize(serializer[name])
 
     def __call__(self, x, retain_forward=False):
         if self.normalize_input:
