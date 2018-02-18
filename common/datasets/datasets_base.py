@@ -77,10 +77,10 @@ class datasets_base(dataset_mixin.DatasetMixin):
     def do_random_brightness(self, img):
         if np.random.rand() > 0.7:
             return img
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV).astype(np.int)
+        hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV).astype(np.int)
         hsv[:,:,2] += np.random.randint(-40,70)
         hsv = np.clip(hsv, 0, 255).astype(np.uint8)
-        img = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+        img = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
         return img
 
     def do_augmentation(self, img):

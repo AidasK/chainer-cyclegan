@@ -30,6 +30,8 @@ def save_single_image(img, path, post_processing=postprocessing_tanh):
         img = post_processing(img)
     #ch, w, h = img.shape
     img = img.transpose((1, 2, 0))
+    #for chainercv fashion
+    img = cv2.cvtColor(img,cv2.COLOR_RGB2BGR)
     cv2.imwrite(path, img)
 
 def save_images_grid(imgs, path, grid_w=4, grid_h=4, post_processing=postprocessing_tanh, transposed=False):
@@ -47,4 +49,6 @@ def save_images_grid(imgs, path, grid_w=4, grid_h=4, post_processing=postprocess
         imgs = imgs.reshape((grid_w, grid_h, w, h, ch)).transpose(0, 2, 1, 3, 4).reshape((grid_w*w, grid_h*h, ch))
     if ch==1:
         imgs = imgs.reshape((grid_w*w, grid_h*h))
+    # for chainercv fashion
+    imgs = cv2.cvtColor(imgs, cv2.COLOR_RGB2BGR)
     cv2.imwrite(path, imgs)

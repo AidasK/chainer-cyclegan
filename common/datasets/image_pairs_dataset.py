@@ -13,8 +13,9 @@ class image_pairs_train(datasets_base):
             self.train_a_key = []
             self.train_a_key.extend(glob.glob(os.path.join(dataset_a, "*.jpg")))
             self.train_a_key.extend(glob.glob(os.path.join(dataset_a, "*.png")))
+            self.train_a_key.extend(glob.glob(os.path.join(dataset_a, "*.tif")))
             if len(self.train_a_key) == 0:
-                print("No .jpg or .png file in " + dataset_a)
+                print("No .jpg or .png or .tif file in " + dataset_a)
                 raise Exception
         elif dataset_a.lower().endswith(('.json')):
             with open(dataset_a,'r') as f:
@@ -25,8 +26,9 @@ class image_pairs_train(datasets_base):
             self.train_b_key = []
             self.train_b_key.extend(glob.glob(os.path.join(dataset_b, "*.jpg")))
             self.train_b_key.extend(glob.glob(os.path.join(dataset_b, "*.png")))
+            self.train_b_key.extend(glob.glob(os.path.join(dataset_b, "*.tif")))
             if len(self.train_b_key) == 0:
-                print("No .jpg or .png file in " + dataset_b)
+                print("No .jpg or .png or .tif file in " + dataset_b)
                 raise Exception
             import random
             random.shuffle(self.train_b_key)
@@ -57,6 +59,9 @@ class image_pairs_train(datasets_base):
 
         imgA = cv2.imread(idA, cv2.IMREAD_COLOR)
         imgB = cv2.imread(idB, cv2.IMREAD_COLOR)
+        #convert BGR to RGB for chainercv fashion
+        imgA = cv2.cvtColor(imgA, cv2.COLOR_BGR2RGB)
+        imgB = cv2.cvtColor(imgB, cv2.COLOR_BGR2RGB)
 
         imgA = self.do_augmentation(imgA)
         imgB = self.do_augmentation(imgB)
