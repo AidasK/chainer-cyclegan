@@ -52,7 +52,7 @@ def main():
     parser.add_argument("--lambda2", type=float, default=1.0, help='lambda for adversarial loss')
     parser.add_argument("--lambda_idt", type=float, default=0.5, help='lambda for identity mapping loss')
 
-    parser.add_argument("--cfmap_loss", type=int, choices = [0,1,2], help='use of cfmap loss 0: train gen, 1: train dis, 2: train both')
+    parser.add_argument("--cfmap_loss", type=int, choices = [0,1,2], help='use of cfmap loss 0: penalize gen, 1: penalize dis, 2: penalize both')
     parser.add_argument("--lambda_cfmap", type=float, default=1.0,
                         help='lambda for cfmap loss')
 

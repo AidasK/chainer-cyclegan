@@ -69,3 +69,27 @@ class image_pairs_train(datasets_base):
         imgA = self.preprocess_image(imgA)
         imgB = self.preprocess_image(imgB)
         return imgA, imgB
+
+    @property
+    def len_A(self):
+        return len(self.train_a_key)
+
+    @property
+    def len_B(self):
+        return len(self.train_b_key)
+
+    def get_example_raw_A(self,i):
+        idA = self.train_a_key[i % len(self.train_a_key)]
+        imgA = cv2.imread(idA, cv2.IMREAD_COLOR)
+        # convert BGR to RGB for chainercv fashion
+        imgA = cv2.cvtColor(imgA, cv2.COLOR_BGR2RGB)
+        imgA = self.preprocess_image(imgA)
+        return imgA
+
+    def get_example_raw_B(self,i):
+        idB = self.train_b_key[i % len(self.train_b_key)]
+        imgB = cv2.imread(idB, cv2.IMREAD_COLOR)
+        # convert BGR to RGB for chainercv fashion
+        imgB = cv2.cvtColor(imgB, cv2.COLOR_BGR2RGB)
+        imgB = self.preprocess_image(imgB)
+        return imgB

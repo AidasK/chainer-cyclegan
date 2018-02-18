@@ -34,21 +34,22 @@ def save_single_image(img, path, post_processing=postprocessing_tanh):
     img = cv2.cvtColor(img,cv2.COLOR_RGB2BGR)
     cv2.imwrite(path, img)
 
-def save_images_grid(imgs, path, grid_w=4, grid_h=4, post_processing=postprocessing_tanh, transposed=False):
+def save_images_grid(imgs, path, post_processing=postprocessing_tanh, transposed=False):
     imgs = copy_to_cpu(imgs)
     if post_processing is not None:
         imgs = post_processing(imgs)
     b, ch, w, h = imgs.shape
-    assert b == grid_w*grid_h
+    batch = int(b / 2 / 3)
 
-    imgs = imgs.reshape((grid_w, grid_h, ch, w, h))
-    imgs = imgs.transpose(0, 1, 3, 4, 2)
-    if transposed:
-        imgs = imgs.reshape((grid_w, grid_h, w, h, ch)).transpose(1, 2, 0, 3, 4).reshape((grid_h*w, grid_w*h, ch))
-    else:
-        imgs = imgs.reshape((grid_w, grid_h, w, h, ch)).transpose(0, 2, 1, 3, 4).reshape((grid_w*w, grid_h*h, ch))
-    if ch==1:
-        imgs = imgs.reshape((grid_w*w, grid_h*h))
+    imgs = imgs.reshape(2,3,batch, ch, w,h)
+    imgs = imgs.transpose(0,2,4,1,5,3)
+    imgs = imgs.reshape(2,batch,w,3*h,ch)
+    imgs = imgs.reshape(2,batch*w,3*h,ch)
+    imgs = imgs.reshape(2*batch*w,3*h,ch)
+
+    if ch == 1:
+        imgs.reshape(2 * batch * w, 3 * h)
     # for chainercv fashion
     imgs = cv2.cvtColor(imgs, cv2.COLOR_RGB2BGR)
     cv2.imwrite(path, imgs)
+
