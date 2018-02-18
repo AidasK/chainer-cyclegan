@@ -168,9 +168,14 @@ def main():
     trainer.extend(extensions.PrintReport(log_keys), trigger=(20, 'iteration'))
     trainer.extend(extensions.ProgressBar(update_interval=50))
 
+    if args.data_test_x:
+        eval_dataset = test_dataset
+    else:
+        eval_dataset = train_dataset
+
     eval_interval = (args.eval_interval, 'iteration')
     trainer.extend(
-        cyclegan_sampling(gen_g, gen_f, test_iter, args.out+"/preview/", 1),
+        cyclegan_sampling(gen_g, gen_f, eval_dataset, args.out+"/preview/", 1),
         trigger=eval_interval
     )
 
