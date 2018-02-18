@@ -117,7 +117,7 @@ class Updater(chainer.training.StandardUpdater):
         x_y_x = self.gen_f(x_y)
 
         y_x = self.gen_f(y)
-        y_x_copy = self._buffer_x.get_and_update(y_x.data)
+        y_x_copy = self._buffer_y.get_and_update(y_x.data)
         y_x_copy = Variable(y_x_copy)
         y_x_y = self.gen_g(y_x)
 
@@ -188,7 +188,6 @@ class Updater(chainer.training.StandardUpdater):
         loss_dis_x_fake = loss_func_lsgan_dis_fake(self.dis_x(y_x_copy))
         loss_dis_x_real = loss_func_lsgan_dis_real(self.dis_x(x))
         loss_dis_x = (loss_dis_x_fake + loss_dis_x_real) * 0.5
-
         chainer.report({'loss': loss_dis_x}, self.dis_x)
 
         loss_dis_y.backward()
