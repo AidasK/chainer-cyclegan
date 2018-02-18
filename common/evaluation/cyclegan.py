@@ -32,8 +32,8 @@ def cyclegan_sampling(gen_g, gen_f, dataset, eval_folder=".", batch_size=1, rand
         else:
             indices_A = indices[0]
             indices_B = indices[1]
-        batches_A = [dataset.get_example_raw_A(i) for i in indices_A]
-        batches_B = [dataset.get_example_raw_B(i) for i in indices_B]
+        batches_A = [xp.asarray(dataset.get_example_raw_A(i)) for i in indices_A]
+        batches_B = [xp.asarray(dataset.get_example_raw_B(i)) for i in indices_B]
 
         x = xp.stack(batches_A)
         y = xp.stack(batches_B)
