@@ -71,7 +71,6 @@ class Updater(chainer.training.StandardUpdater):
         # for m in models:
         #     m.cleargrads()
         self.gen_g, self.gen_f, self.dis_x, self.dis_y = models
-        self._iter = 0
         params = kwargs.pop('params')
         self._lambda1 = params['lambda1']
         self._lambda2 = params['lambda2']
@@ -92,7 +91,6 @@ class Updater(chainer.training.StandardUpdater):
 
     def update_core(self):
         xp = self.gen_g.xp
-        self._iter += 1
         batch = self.get_iterator('main').next()
 
         batchsize = len(batch)
@@ -202,9 +200,9 @@ class Updater(chainer.training.StandardUpdater):
         # self.dis_y.cleargrads()
         # self.dis_x.cleargrads()
 
-        if self._iter >= self._learning_rate_anneal_trigger and \
+        if self.iteration >= self._learning_rate_anneal_trigger and \
                 self._learning_rate_anneal > 0 and \
-                self._iter % self._learning_rate_anneal_interval == 0:
+                self.iteration % self._learning_rate_anneal_interval == 0:
             if opt_g.alpha > self._learning_rate_anneal:
                 opt_g.alpha -= self._learning_rate_anneal
             if opt_f.alpha > self._learning_rate_anneal:
