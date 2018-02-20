@@ -35,6 +35,7 @@ class DCGANDiscriminator(chainer.Chain):
             base*=2
 
         layers['c'+str(down_layers)] = NNBlock(base, base*2, nn='down_conv_2', norm=norm, activation=act, noise=noise_all_layers, w_init=w_init)
+        base *= 2
 
         if conv_as_last:
             layers['c_last'] = NNBlock(base, 1, nn='conv', norm=None, activation=None, w_init=w_init)
@@ -47,7 +48,7 @@ class DCGANDiscriminator(chainer.Chain):
 
     def __call__(self, x, retain_forward=False):
         h = self.c_first(x, retain_forward=retain_forward)
-        for i in range(1,self.down_layers):
+        for i in range(1,self.down_layers+1):
             h = getattr(self, 'c'+str(i))(h, retain_forward=retain_forward)
         if not self.conv_as_last:
             _b, _ch, _w, _h = h.data.shape
