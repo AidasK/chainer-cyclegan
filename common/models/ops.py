@@ -60,13 +60,10 @@ def _pad_along_axis(x, pad, axis):
     x = F.concat((head, x, tail), axis=axis)
     return x
 
-
-
-
 class ResBlock(chainer.Chain):
     def __init__(self, ch, norm=None, activation=F.relu, k_size=3, w_init=None, reflect = 0, norm_learnable = True, normalize_grad = False):
         if w_init == None:
-            w = chainer.initializers.HeNormal()
+            w = chainer.initializers.Normal(0.002)
         else:
             w = w_init
         if norm in ['instance','bn']:
@@ -232,7 +229,7 @@ class NNBlock(chainer.Chain):
         layers = {}
 
         if w_init == None:
-            w = chainer.initializers.GlorotNormal()
+            w = chainer.initializers.Normal(0.02)
         else:
             w = w_init
 

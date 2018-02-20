@@ -10,8 +10,8 @@ from .ops import *
 from common.instance_norm_v2 import InstanceNormalization
 
 class ResNetImageTransformer(chainer.Chain):
-    def __init__(self, base_channels=32,  norm_func='instance', normal_init=0.02, down_layers=2,
-            res_layers=9, up_layers=2, upsampling='up_unpooling', \
+    def __init__(self, base_channels=32, norm_func='instance', init_std=0.02, down_layers=2,
+                 res_layers=9, up_layers=2, upsampling='up_unpooling', \
                  reflect=0, norm_learnable=True, normalize_grad=False):
         layers = {}
         self.down_layers = down_layers
@@ -32,13 +32,11 @@ class ResNetImageTransformer(chainer.Chain):
         #     w = None
         if norm_func == 'instance':
             norm = 'instance'
-            w = chainer.initializers.Normal(normal_init)
         elif norm_func == 'bn':
             norm = 'bn'
-            w = chainer.initializers.Normal(normal_init)
         else:
             norm = None
-            w = None
+        w = chainer.initializers.Normal(init_std)
 
         base = base_channels
         if reflect == 2:
@@ -52,7 +50,7 @@ class ResNetImageTransformer(chainer.Chain):
                                                norm_learnable = norm_learnable, normalize_grad = normalize_grad)
             base = base * 2
         for i in range(self.res_layers):
-            layers['c_res_'+str(i)] = ResBlock(base, norm=norm, reflect=reflect, norm_learnable=norm_learnable,\
+            layers['c_res_'+str(i)] = ResBlock(base, norm=norm, w_init=w, reflect=reflect, norm_learnable=norm_learnable,\
                                                normalize_grad=normalize_grad)
         for i in range(self.up_layers):
             layers['c_up_'+str(i)] = NNBlock(base, base//2, nn=upsampling, norm=norm, w_init=w, \
