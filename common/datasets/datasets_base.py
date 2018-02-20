@@ -17,7 +17,9 @@ class datasets_base(dataset_mixin.DatasetMixin):
 
     def preprocess_image(self, img):
         img = img.astype("f")
-        img = img / 127.5 - 1
+        # img = img / 127.5 - 1
+        img = img / 255
+        img = (img - 0.5) / 0.5
         img = img.transpose((2, 0, 1))
         return img
 
