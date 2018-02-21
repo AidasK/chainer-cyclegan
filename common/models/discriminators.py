@@ -38,7 +38,7 @@ class DCGANDiscriminator(chainer.Chain):
         base *= 2
 
         if conv_as_last:
-            layers['c_last'] = NNBlock(base, 1, nn='conv', norm=None, activation=None, w_init=w_init)
+            layers['c_last'] = NNBlock(base, 1, nn='down_conv_2', norm=None, activation=None, w_init=w_init)
         else:
             layers['c_last'] = NNBlock(None, 1, nn='linear', norm=None, activation=None, w_init=w_init)
 
