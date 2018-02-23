@@ -41,7 +41,8 @@ def cyclegan_sampling(gen_g, gen_f, dataset, eval_folder=".", batch_size=1, rand
         x = Variable(x)
         y = Variable(y)
 
-        with chainer.using_config('train', False), chainer.using_config('enable_backprop', False):
+        #with chainer.using_config('train', False), chainer.using_config('enable_backprop', False):
+        with chainer.using_config('train', True), chainer.using_config('enable_backprop', False):
             x_y = gen_g(x)
             y_x = gen_f(y)
             x_y_x = gen_f(x_y)
