@@ -11,7 +11,7 @@ from common.instance_norm_v2 import InstanceNormalization
 
 class ResNetImageTransformer(chainer.Chain):
     def __init__(self, base_channels=32, norm_func='instance', init_std=0.02, down_layers=2,
-                 res_layers=9, up_layers=2, upsampling='up_unpooling', \
+                 res_layers=9, up_layers=2, upsampling='deconvolution', \
                  reflect=0, norm_learnable=True, normalize_grad=False):
         layers = {}
         self.down_layers = down_layers

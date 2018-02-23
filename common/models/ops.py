@@ -253,7 +253,8 @@ class NNBlock(chainer.Chain):
             if pad == None:
                 pad = k_size//2
             layers['c'] = L.Convolution2D(ch0, ch1, k_size, 1, pad, initialW=w)
-
+        elif nn == 'deconvolution':
+            layers['c'] = L.Deconvolution2D(ch0, ch1, 3, 2, 1, initialW=w)
         elif nn=='linear':
             layers['c'] = L.Linear(ch0, ch1, initialW=w)
 
@@ -304,11 +305,15 @@ class NNBlock(chainer.Chain):
     def _do_before_cal(self, x):
         if self.nn == 'up_unpooling':
             x = F.unpooling_2d(x, 2, 2, 0, cover_all=False)
+        elif self.nn == 'deconvolution':
+            x = F.pad(x,((0,0),(0,0),(0,1),(0,1)),mode='constant')
         return x
 
     def _do_after_cal_0(self, x):
         if self.nn == 'up_subpixel':
             x = F.depth2space(x, 2)
+        elif self.nn == 'deconvolution':
+            x = F.get_item(x, (slice(None), slice(None), slice(0, -1), slice(0, -1)))
         return x
 
     def _do_after_cal_1(self, x):
