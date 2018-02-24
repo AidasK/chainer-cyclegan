@@ -158,8 +158,13 @@ class InstanceNormalization(link.Link):
 
         else:
             # Use running average statistics or fine-tuned statistics.
-            mean = variable.Variable(mean)
-            var = variable.Variable(var)
+            # mean = variable.Variable(mean)
+            # var = variable.Variable(var)
+            head_ndim = gamma.ndim + 1
+            axis = (0,) + tuple(range(head_ndim, reshaped_x.ndim))
+            mean = reshaped_x.data.mean(axis=axis)
+            var = reshaped_x.data.var(axis=axis)
+            # var += self.eps
             ret = functions.fixed_batch_normalization(
                 reshaped_x, gamma, beta, mean, var, self.eps)
 
@@ -169,8 +174,8 @@ class InstanceNormalization(link.Link):
 
 if __name__ == '__main__':
     import numpy as np
-
-    base_shape = [10, 3]
+    np.random.seed(1)
+    base_shape = [1, 3]
     with chainer.using_config('debug', True):
         for i, n_element in enumerate([32, 32, 32]):
             base_shape.append(n_element)
@@ -189,6 +194,10 @@ if __name__ == '__main__':
             print('*** diff ***')
             print('\tmean: {:03f},\n\tstd: {:.03f}'.format(
                 np.mean(diff), np.std(diff)))
+
+        y_ = chainer.links.BatchNormalization(base_shape[1])(x)
+
+        print((y.data == y_.data).any())
 
         print(type(y))
         loss = functions.sum(y)
