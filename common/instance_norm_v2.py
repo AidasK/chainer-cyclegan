@@ -100,13 +100,13 @@ class InstanceNormalization(link.Link):
                          'Use chainer.using_config')
         finetune, = argument.parse_kwargs(kwargs, ('finetune', False))
 
-        # reshape input x
         original_shape = x.shape
-        # batch_size, n_ch = original_shape[:2]
         batch_size = original_shape[0]
-        # new_shape = (1, batch_size * n_ch) + original_shape[2:]
-        # reshaped_x = functions.reshape(x, new_shape)
-        reshaped_x = functions.expand_dims(x, axis=0)
+        # reshape input x if batchsize > 1
+        if batch_size > 1:
+            reshaped_x = functions.expand_dims(x, axis=0)
+        else:
+            reshaped_x = x
 
         if hasattr(self, 'gamma'):
             gamma = self.gamma
@@ -125,14 +125,15 @@ class InstanceNormalization(link.Link):
                 beta = variable.Variable(self.xp.zeros(
                     self.avg_mean.shape, dtype=x.dtype))
 
-        # mean = chainer.as_variable(self.xp.hstack([self.avg_mean] * batch_size))
-        mean = self.xp.stack((self.avg_mean,) * batch_size)
-        # var = chainer.as_variable(self.xp.hstack([self.avg_var] * batch_size))
-        var = self.xp.stack((self.avg_var,) * batch_size)
-        # gamma = chainer.as_variable(self.xp.hstack([gamma.array] * batch_size))
-        gamma = functions.stack((gamma,) * batch_size)
-        # beta = chainer.as_variable(self.xp.hstack([beta.array] * batch_size))
-        beta = functions.stack((beta,) * batch_size)
+        #align shapes if x was reshaped
+        if batch_size > 1:
+            mean = self.xp.stack((self.avg_mean,) * batch_size)
+            var = self.xp.stack((self.avg_var,) * batch_size)
+            gamma = functions.stack((gamma,) * batch_size)
+            beta = functions.stack((beta,) * batch_size)
+        else:
+            mean = self.xp.asarray(self.avg_mean)
+            var = self.xp.asarray(self.avg_var)
 
         if configuration.config.train:
             if finetune:
@@ -145,21 +146,7 @@ class InstanceNormalization(link.Link):
                 self.eps, mean, var, decay)
             ret = func(reshaped_x, gamma, beta)
 
-            self.avg_mean[...] = func.running_mean.mean(axis=0)
-            self.avg_var[...] = func.running_var.mean(axis=0)
-
-            # ret = functions.batch_normalization(
-            #     reshaped_x, gamma, beta, eps=self.eps, running_mean=mean,
-            #     running_var=var, decay=decay)
-            #
-            # # store running mean and var
-            # self.avg_mean[...] = mean.mean(axis=0)
-            # self.avg_var[...] = var.mean(axis=0)
-
         else:
-            # Use running average statistics or fine-tuned statistics.
-            # mean = variable.Variable(mean)
-            # var = variable.Variable(var)
             head_ndim = gamma.ndim + 1
             axis = (0,) + tuple(range(head_ndim, reshaped_x.ndim))
             mean = reshaped_x.data.mean(axis=axis)
@@ -169,7 +156,9 @@ class InstanceNormalization(link.Link):
                 reshaped_x, gamma, beta, mean, var, self.eps)
 
         # ret is normalized input x
-        return functions.reshape(ret, original_shape)
+        if batch_size > 1:
+            ret = functions.reshape(ret, original_shape)
+        return ret
 
 
 if __name__ == '__main__':
