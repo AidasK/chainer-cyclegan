@@ -70,12 +70,32 @@ class Updater(chainer.training.StandardUpdater):
         self._learning_rate_anneal_trigger = params['learning_rate_anneal_trigger']
         self._image_size = params['image_size']
         self._max_buffer_size = params['buffer_size']
+        self.xp = self.gen_g.xp
         # self._cfmap_loss = params['cfmap_loss']
         # self._lambda_cfmap = params['lambda_cfmap']
 
         self._buffer_x = HistoricalBuffer(self._max_buffer_size, self._image_size)
         self._buffer_y = HistoricalBuffer(self._max_buffer_size, self._image_size)
         super(Updater, self).__init__(*args, **kwargs)
+
+
+    def loss_func_rec_l1(self, x_out, t):
+        return F.mean_absolute_error(x_out, t)
+
+    def loss_func_adv_dis_fake(self, y_fake):
+        target = Variable(
+            self.xp.full(y_fake.data.shape, 0.0).astype('f'))
+        return F.mean_squared_error(y_fake, target)
+
+    def loss_func_adv_dis_real(self, y_real):
+        target = Variable(
+            self.xp.full(y_real.data.shape, 1.0).astype('f'))
+        return F.mean_squared_error(y_real, target)
+
+    def loss_func_adv_gen(self, y_fake):
+        target = Variable(
+            self.xp.full(y_fake.data.shape, 1.0).astype('f'))
+        return F.mean_squared_error(y_fake, target)
 
     def update_core(self):
         xp = self.gen_g.xp
@@ -112,10 +132,14 @@ class Updater(chainer.training.StandardUpdater):
         self.gen_f.cleargrads()
         self.gen_g.cleargrads()
 
-        loss_gen_g_adv = self._lambda2 * loss_func_lsgan_dis_real(self.dis_y(x_y))
-        loss_gen_f_adv = self._lambda2 * loss_func_lsgan_dis_real(self.dis_x(y_x))
-        loss_cycle_x = self._lambda1 * loss_l1(x_y_x, x)
-        loss_cycle_y = self._lambda1 * loss_l1(y_x_y, y)
+        # loss_gen_g_adv = self._lambda2 * loss_func_lsgan_dis_real(self.dis_y(x_y))
+        # loss_gen_f_adv = self._lambda2 * loss_func_lsgan_dis_real(self.dis_x(y_x))
+        # loss_cycle_x = self._lambda1 * loss_l1(x_y_x, x)
+        # loss_cycle_y = self._lambda1 * loss_l1(y_x_y, y)
+        loss_gen_g_adv = self._lambda2 * self.loss_func_adv_gen(self.dis_y(x_y))
+        loss_gen_f_adv = self._lambda2 * self.loss_func_adv_gen(self.dis_x(y_x))
+        loss_cycle_x = self._lambda1 * self.loss_func_rec_l1(x_y_x, x)
+        loss_cycle_y = self._lambda1 * self.loss_func_rec_l1(y_x_y, y)
 
         # if self._cfmap_loss in [0,2]:
         #     loss_cfmap_X = F.mean_squared_error(self.dis_y(x), self.dis_x(x_y)) * self._lambda_cfmap
@@ -132,9 +156,11 @@ class Updater(chainer.training.StandardUpdater):
 
         if self._lambda_idt > 0:
             idtY = self.gen_g(y)
-            loss_idtY = F.sum(F.absolute_error(idtY,y)) / np.prod(idtY.shape)
+            # loss_idtY = F.sum(F.absolute_error(idtY,y)) / np.prod(idtY.shape)
+            loss_idtY = F.mean_absolute_error(idtY,y)
             idtX = self.gen_f(x)
-            loss_idtX = F.sum(F.absolute_error(idtX, x)) / np.prod(idtX.shape)
+            # loss_idtX = F.sum(F.absolute_error(idtX, x)) / np.prod(idtX.shape)
+            loss_idtX = F.mean_absolute_error(idtX,x)
             loss_idt = (loss_idtX + loss_idtY) * self._lambda1 * self._lambda_idt
         else:
             loss_idtY = 0
@@ -162,13 +188,17 @@ class Updater(chainer.training.StandardUpdater):
         self.dis_y.cleargrads()
         self.dis_x.cleargrads()
 
-        loss_dis_y_fake = loss_func_lsgan_dis_fake(self.dis_y(x_y_copy))
-        loss_dis_y_real = loss_func_lsgan_dis_real(self.dis_y(y))
+        # loss_dis_y_fake = loss_func_lsgan_dis_fake(self.dis_y(x_y_copy))
+        # loss_dis_y_real = loss_func_lsgan_dis_real(self.dis_y(y))
+        loss_dis_y_fake = self.loss_func_adv_dis_fake(self.dis_y(x_y_copy))
+        loss_dis_y_real = self.loss_func_adv_dis_real(self.dis_y(y))
         loss_dis_y = (loss_dis_y_fake + loss_dis_y_real) * 0.5
         chainer.report({'loss': loss_dis_y}, self.dis_y)
 
-        loss_dis_x_fake = loss_func_lsgan_dis_fake(self.dis_x(y_x_copy))
-        loss_dis_x_real = loss_func_lsgan_dis_real(self.dis_x(x))
+        # loss_dis_x_fake = loss_func_lsgan_dis_fake(self.dis_x(y_x_copy))
+        # loss_dis_x_real = loss_func_lsgan_dis_real(self.dis_x(x))
+        loss_dis_x_fake = self.loss_func_adv_dis_fake(self.dis_x(y_x_copy))
+        loss_dis_x_real = self.loss_func_adv_dis_real(self.dis_x(x))
         loss_dis_x = (loss_dis_x_fake + loss_dis_x_real) * 0.5
         chainer.report({'loss': loss_dis_x}, self.dis_x)
 
