@@ -8,6 +8,7 @@ from common.models.discriminators import *
 from common.models.transformers import *
 from common.evaluation.visualization import *
 from common.utils import *
+from net import *
 
 def main():
     parser = argparse.ArgumentParser(
@@ -69,8 +70,10 @@ def main():
 
     if args.norm == 'None': args.norm = None
 
-    gen_g = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
-    gen_f = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
+    # gen_g = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
+    # gen_f = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
+    gen_g = Generator()
+    gen_f = Generator()
     dis_x = DCGANDiscriminator(norm=args.norm)
     dis_y = DCGANDiscriminator(norm=args.norm)
 
