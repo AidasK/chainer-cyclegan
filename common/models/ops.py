@@ -46,7 +46,7 @@ def _pad_along_axis(x, pad, axis):
 class ResBlock(chainer.Chain):
     def __init__(self, ch, norm=None, activation=F.relu, k_size=3, w_init=None, reflect = 0, norm_learnable = True, normalize_grad = False):
         if w_init == None:
-            w = chainer.initializers.Normal(0.002)
+            w = chainer.initializers.Normal(0.02)
         else:
             w = w_init
         if norm in ['instance','bn']:
@@ -111,19 +111,19 @@ class ResBlock(chainer.Chain):
             d[name].serialize(serializer[name])
 
     def __call__(self, x):
-        if self.reflect == 0:
-            _pad = self.c0.W.shape[2] // 2
-            self.c0.pad = (_pad, _pad)
-            self.c1.pad = (_pad, _pad)
-        else:
-            self.c0.pad = (0,0)
-            self.c1.pad = (0,0)
+        # if self.reflect == 0:
+        #     _pad = self.c0.W.shape[2] // 2
+        #     self.c0.pad = (_pad, _pad)
+        #     self.c1.pad = (_pad, _pad)
+        # else:
+        #     self.c0.pad = (0,0)
+        #     self.c1.pad = (0,0)
         if self.reflect == 2:
             # h = F.pad(x, ((0, 0), (0, 0), (1, 1), (1, 1)), mode='reflect') << 'reflect' is not currently supported(v3)
             h = reflectPad(x, 1)
+            h = self.c0(h)
         else:
-            h = x
-        h = self.c0(h)
+            h = self.c0(x)
         if self.use_norm:
             h = self.norm0(h)
         h = self.activation(h)
