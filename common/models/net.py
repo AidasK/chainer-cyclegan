@@ -60,33 +60,31 @@ def get_norm_layer(norm='instance'):
 
 
 class ResBlock(chainer.Chain):
-    def __init__(self, ch, norm='instance', pad_type='reflect', activation=F.relu):
+    def __init__(self, ch, norm='instance', reflect=True, activation=F.relu):
         super(ResBlock, self).__init__()
         self.activation = activation
         w = chainer.initializers.Normal(0.02)
-        if pad_type == 'reflect':
+        if reflect:
             pad = 0
-        elif pad_type == 'zero':
-            pad = 1
         else:
-            raise NotImplementedError('padding [%s] is not implemented' % pad_type)
+            pad = 1
 
         with self.init_scope():
             self.c0 = L.Convolution2D(ch, ch, 3, 1, pad, initialW=w)
             self.c1 = L.Convolution2D(ch, ch, 3, 1, pad, initialW=w)
             self.norm0 = get_norm_layer(norm)(ch)
             self.norm1 = get_norm_layer(norm)(ch)
-            self.pad_type = pad_type
+            self.reflect = reflect
 
     def __call__(self, x):
-        if self.pad_type == 'reflect':
+        if self.reflect:
             h = reflectPad(x,1)
             h = self.c0(h)
         else:
             h = self.c0(x)
         h = self.norm0(h)
         h = self.activation(h)
-        if self.pad_type == 'reflect':
+        if self.reflect:
             h = reflectPad(h,1)
         h = self.c1(h)
         h = self.norm1(h)
@@ -151,13 +149,13 @@ class Generator(chainer.Chain):
             self.c2 = CNA(32, 64, norm=norm, sample='down')
             self.c3 = CNA(64, 128, norm=norm, sample='down')
             for i in range(n_resblock):
-                setattr(self, 'c' + str(i + 4), ResBlock(128, norm=norm))
+                setattr(self, 'c' + str(i + 4), ResBlock(128, norm=norm,reflect=reflect))
             # nn.ConvTranspose2d in original
             setattr(self, 'c' + str(n_resblock + 4),
                     CNA(128, 64, norm=norm, sample='up'))
             setattr(self, 'c' + str(n_resblock + 5),
                     CNA(64, 32, norm=norm, sample='up'))
-            if reflect == 'reflect':
+            if reflect:
                 setattr(self, 'c' + str(n_resblock + 6),
                         CNA(32, 3, norm=norm, sample='none-7_nopad', activation=F.tanh))
             else:
