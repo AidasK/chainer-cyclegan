@@ -12,7 +12,7 @@ from common.utils import *
 def main():
     parser = argparse.ArgumentParser(
         description='Train CycleGAN')
-    parser.add_argument('--batch_size', '-b', type=int, default=1)
+    parser.add_argument('--batchsize', '-b', type=int, default=1)
     parser.add_argument('--max_iter', '-m', type=int, default=200000)
     parser.add_argument('--gpu', '-g', type=int, default=0,
                         help='GPU ID (negative value indicates CPU)')
@@ -105,7 +105,7 @@ def main():
     train_dataset = datasets.image_pairs_train(args.data_train_x, args.data_train_y,
             resize_to=args.resize_to, crop_to=args.crop_to)
     train_iter = chainer.iterators.MultiprocessIterator(
-        train_dataset, args.batch_size, n_processes=4)
+        train_dataset, args.batchsize, n_processes=4)
 
     if args.data_test_x:
         test_dataset = datasets.image_pairs_train(args.data_test_x, args.data_test_y,
