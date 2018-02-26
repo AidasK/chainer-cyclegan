@@ -82,9 +82,9 @@ class ResBlock(chainer.Chain):
     def __call__(self, x):
         if self.pad_type == 'reflect':
             h = reflectPad(x,1)
+            h = self.c0(h)
         else:
-            h = x
-        h = self.c0(h)
+            h = self.c0(x)
         h = self.norm0(h)
         h = self.activation(h)
         if self.pad_type == 'reflect':
@@ -93,11 +93,10 @@ class ResBlock(chainer.Chain):
         h = self.norm1(h)
         return h + x
 
-
-class CBR(chainer.Chain):
+class CNA(chainer.Chain):
     def __init__(self, ch0, ch1, ksize=3, pad=1, norm='instance',
                  sample='down', activation=F.relu, dropout=False):
-        super(CBR, self).__init__()
+        super(CNA, self).__init__()
         self.activation = activation
         self.dropout = dropout
         self.sample = sample
@@ -123,16 +122,14 @@ class CBR(chainer.Chain):
                 self.norm = get_norm_layer(norm)(ch1)
 
     def __call__(self, x):
-        if self.sample in ['down', 'none', 'none-9', 'none-7','none-7_nopad', 'none-5']:
-            h = self.c(x)
-        elif self.sample == 'up':
-            # h = F.unpooling_2d(x, 2, 2, 0, cover_all=False)
-            # h = self.c(h)
+        # if self.sample in ['down', 'none', 'none-9', 'none-7','none-7_nopad', 'none-5']:
+        #     h = self.c(x)
+        if self.sample == 'up':
             h = F.pad(x,((0,0),(0,0),(0,1),(0,1)),mode='constant')
             h = self.c(h)
             h = F.get_item(h,(slice(None),slice(None),slice(0,-1),slice(0,-1)))
         else:
-            print('unknown sample method %s' % self.sample)
+            h = self.c(x)
         if self.use_norm:
             h = self.norm(h)
         if self.dropout:
@@ -149,32 +146,32 @@ class Generator(chainer.Chain):
         with self.init_scope():
             # nn.ReflectionPad2d in original
             if pad_type == 'reflect':
-                self.c1 = CBR(3, 32, norm=norm, sample='none-7_nopad')
+                self.c1 = CNA(3, 32, norm=norm, sample='none-7_nopad')
             else:
-                self.c1 = CBR(3, 32, norm=norm, sample='none-7')
-            self.c2 = CBR(32, 64, norm=norm, sample='down')
-            self.c3 = CBR(64, 128, norm=norm, sample='down')
+                self.c1 = CNA(3, 32, norm=norm, sample='none-7')
+            self.c2 = CNA(32, 64, norm=norm, sample='down')
+            self.c3 = CNA(64, 128, norm=norm, sample='down')
             for i in range(n_resblock):
                 setattr(self, 'c' + str(i + 4), ResBlock(128, norm=norm))
             # nn.ConvTranspose2d in original
             setattr(self, 'c' + str(n_resblock + 4),
-                    CBR(128, 64, norm=norm, sample='up'))
+                    CNA(128, 64, norm=norm, sample='up'))
             setattr(self, 'c' + str(n_resblock + 5),
-                    CBR(64, 32, norm=norm, sample='up'))
+                    CNA(64, 32, norm=norm, sample='up'))
             if pad_type == 'reflect':
                 setattr(self, 'c' + str(n_resblock + 6),
-                        CBR(32, 3, norm=norm, sample='none-7_nopad', activation=F.tanh))
+                        CNA(32, 3, norm=norm, sample='none-7_nopad', activation=F.tanh))
             else:
                 setattr(self, 'c' + str(n_resblock + 6),
-                        CBR(32, 3, norm=norm, sample='none-7', activation=F.tanh))
+                        CNA(32, 3, norm=norm, sample='none-7', activation=F.tanh))
             self.pad_type= pad_type
 
     def __call__(self, x):
         if self.pad_type == 'reflect':
             h = reflectPad(x,3)
+            h = self.c1(h)
         else:
-            h = x
-        h = self.c1(h)
+            h = self.c1(x)
         for i in range(2, self.n_resblock + 6):
             h = getattr(self, 'c' + str(i))(h)
         if self.pad_type == 'reflect':
@@ -192,24 +189,24 @@ class Discriminator(chainer.Chain):
         self.n_down_layers = n_down_layers
 
         with self.init_scope():
-            self.c0 = CBR(in_ch, 64, ksize=ksize, pad=pad, norm=None,
+            self.c0 = CNA(in_ch, 64, ksize=ksize, pad=pad, norm=None,
                           sample='down', activation=F.leaky_relu,
                           dropout=False)
 
             for i in range(1, n_down_layers):
                 setattr(self, 'c' + str(i),
-                        CBR(base, base * 2, ksize=ksize, pad=pad, norm=norm,
+                        CNA(base, base * 2, ksize=ksize, pad=pad, norm=norm,
                             sample='down', activation=F.leaky_relu,
                             dropout=False))
                 base *= 2
 
             setattr(self, 'c' + str(n_down_layers),
-                    CBR(base, base * 2, ksize=ksize, pad=pad, norm=norm,
+                    CNA(base, base * 2, ksize=ksize, pad=pad, norm=norm,
                         sample='none', activation=F.leaky_relu, dropout=False))
             base *= 2
 
             setattr(self, 'c' + str(n_down_layers + 1),
-                    CBR(base, 1, ksize=ksize, pad=pad, norm=None,
+                    CNA(base, 1, ksize=ksize, pad=pad, norm=None,
                         sample='none', activation=None, dropout=False))
 
     def __call__(self, x_0):

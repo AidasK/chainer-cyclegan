@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 import argparse
+
 from chainer import training
 from chainer.training import extensions
-from updater import *
+
 import common.datasets as datasets
-from common.models.discriminators import *
-from common.models.transformers import *
 from common.evaluation.visualization import *
+from common.models.discriminators import *
+from common.models.net import *
 from common.utils import *
-from net import *
+from updater import *
 
 def main():
     parser = argparse.ArgumentParser(
@@ -70,10 +71,10 @@ def main():
 
     if args.norm == 'None': args.norm = None
 
-    gen_g = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
-    gen_f = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
-    # gen_g = Generator()
-    # gen_f = Generator()
+    # gen_g = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
+    # gen_f = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
+    gen_g = Generator()
+    gen_f = Generator()
     dis_x = DCGANDiscriminator(norm=args.norm)
     dis_y = DCGANDiscriminator(norm=args.norm)
 
@@ -163,6 +164,12 @@ def main():
     trainer.extend(extensions.LogReport(keys=log_keys, trigger=(20, 'iteration')))
     trainer.extend(extensions.PrintReport(log_keys), trigger=(20, 'iteration'))
     trainer.extend(extensions.ProgressBar(update_interval=50))
+
+    if extensions.PlotReport.available():
+        trainer.extend(
+            extensions.PlotReport(
+                log_keys, 'iteration',
+                trigger=(100, 'iteration'), file_name='loss.png'))
 
     if args.data_test_x:
         eval_dataset = test_dataset
