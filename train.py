@@ -70,10 +70,10 @@ def main():
 
     if args.norm == 'None': args.norm = None
 
-    # gen_g = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
-    # gen_f = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
-    gen_g = Generator()
-    gen_f = Generator()
+    gen_g = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
+    gen_f = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
+    # gen_g = Generator()
+    # gen_f = Generator()
     dis_x = DCGANDiscriminator(norm=args.norm)
     dis_y = DCGANDiscriminator(norm=args.norm)
 
