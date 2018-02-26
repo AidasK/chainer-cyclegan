@@ -6,7 +6,6 @@ try:
     import cupy
 except:
     pass
-import os
 
 def copy_to_cpu(imgs):
     if type(imgs) == chainer.variable.Variable :
@@ -19,9 +18,7 @@ def copy_to_cpu(imgs):
     return imgs
 
 def postprocessing_tanh(imgs):
-    # imgs = (imgs + 1) * 127.5
     imgs = (imgs * 0.5 + 0.5) * 255
-    # imgs = np.clip(imgs, 0, 255)
     imgs = imgs.astype(np.uint8)
     return imgs
 

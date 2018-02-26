@@ -1,28 +1,16 @@
-import os
 import chainer
-from chainer.training import extension
 from chainer import Variable, cuda
-import chainer.functions as F
 import numpy as np
 import os
-import cv2
 from common.utils.save_images import save_images_grid
 
-def cyclegan_sampling(gen_g, gen_f, dataset, eval_folder=".", batch_size=1, random = True, indices = None):
+def visualization(gen_g, gen_f, dataset, eval_folder=".", batch_size=1, random = True, indices = None):
     @chainer.training.make_extension()
     def samples_generation(trainer):
         if not os.path.exists(eval_folder):
             os.makedirs(eval_folder)
 
         xp = gen_f.xp
-        # batch = dataset.next()
-        # img_shape = batch[0][0].shape
-        # x = xp.zeros((batch_size,) + img_shape).astype("f")
-        # y = xp.zeros((batch_size,) + img_shape).astype("f")
-        #
-        # for i in range(batch_size):
-        #     x[i, :] = xp.asarray(batch[i][0])
-        #     y[i, :] = xp.asarray(batch[i][1])
 
         if random:
             datasize_A = dataset.len_A
@@ -50,6 +38,6 @@ def cyclegan_sampling(gen_g, gen_f, dataset, eval_folder=".", batch_size=1, rand
         imgs = xp.concatenate((x.data, x_y.data, x_y_x.data, y.data, y_x.data, y_x_y.data), axis=0)
         filename="iter_" + str(trainer.updater.iteration) + ".jpg"
 
-        save_images_grid(imgs, path=eval_folder+'/'+filename)
+        save_images_grid(imgs, path=os.path.join(eval_folder,filename))
 
     return samples_generation

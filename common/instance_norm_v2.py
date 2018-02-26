@@ -1,6 +1,5 @@
 import numpy
 
-import chainer
 from chainer import configuration
 from chainer import cuda
 from chainer import functions
@@ -39,10 +38,6 @@ class Parameter_scale(variable.Parameter):
     @property
     def n_batch(self):
         return self._n_batch
-
-    # @n_batch.setter
-    # def n_batch(self,n):
-    #     self._n_batch += n
 
     def add_batch(self,n):
         self._n_batch += n
@@ -151,7 +146,6 @@ class InstanceNormalization(link.Link):
             axis = (0,) + tuple(range(head_ndim, reshaped_x.ndim))
             mean = reshaped_x.data.mean(axis=axis)
             var = reshaped_x.data.var(axis=axis)
-            # var += self.eps
             ret = functions.fixed_batch_normalization(
                 reshaped_x, gamma, beta, mean, var, self.eps)
 
@@ -159,93 +153,3 @@ class InstanceNormalization(link.Link):
         if batch_size > 1:
             ret = functions.reshape(ret, original_shape)
         return ret
-
-
-if __name__ == '__main__':
-    import numpy as np
-    np.random.seed(1)
-    base_shape = [1, 3]
-    with chainer.using_config('debug', True):
-        for i, n_element in enumerate([32, 32, 32]):
-            base_shape.append(n_element)
-            print('# {} th: input shape: {}'.format(i, base_shape))
-            x_array = np.random.normal(size=base_shape).astype(np.float32)
-            x = chainer.Variable(x_array)
-            layer = InstanceNormalization(base_shape[1],norm_grad=True)
-            y = layer(x)
-            # calculate y_hat manually
-            axes = tuple(range(2, len(base_shape)))
-            x_mean = np.mean(x_array, axis=axes, keepdims=True)
-            x_var = np.var(x_array, axis=axes, keepdims=True) + 1e-5
-            x_std = np.sqrt(x_var)
-            y_hat = (x_array - x_mean) / x_std
-            diff = y.data - y_hat
-            print('*** diff ***')
-            print('\tmean: {:03f},\n\tstd: {:.03f}'.format(
-                np.mean(diff), np.std(diff)))
-
-        y_ = chainer.links.BatchNormalization(base_shape[1])(x)
-
-        print((y.data == y_.data).any())
-
-        print(type(y))
-        loss = functions.sum(y)
-        layer.cleargrads()
-        loss.backward()
-        print(layer.gamma.grad)
-        print(layer.beta.grad)
-        print(layer.avg_mean)
-        print(layer.avg_var)
-        opt = chainer.optimizers.SGD()
-        opt.setup(layer)
-        opt.update()
-
-        base_shape = [10, 3]
-        with chainer.using_config('train', False):
-            print('\n# test mode\n')
-            for i, n_element in enumerate([32, 32, 32]):
-                base_shape.append(n_element)
-                print('# {} th: input shape: {}'.format(i, base_shape))
-                x_array = np.random.normal(size=base_shape).astype(np.float32)
-                x = chainer.Variable(x_array)
-                layer = InstanceNormalization(base_shape[1])
-                y = layer(x)
-                axes = tuple(range(2, len(base_shape)))
-                x_mean = np.mean(x_array, axis=axes, keepdims=True)
-                x_var = np.var(x_array, axis=axes, keepdims=True) + 1e-5
-                x_std = np.sqrt(x_var)
-                y_hat = (x_array - x_mean) / x_std
-                diff = y.data - y_hat
-                print('*** diff ***')
-                print('\tmean: {:03f},\n\tstd: {:.03f}'.format(
-                    np.mean(diff), np.std(diff)))
-
-"""
-○ → python instance_norm.py
-# 0 th: input shape: [10, 3, 32]
-*** diff ***
-        mean: -0.000000,
-        std: 0.000
-# 1 th: input shape: [10, 3, 32, 32]
-*** diff ***
-        mean: -0.000000,
-        std: 0.000
-# 2 th: input shape: [10, 3, 32, 32, 32]
-*** diff ***
-        mean: -0.000000,
-        std: 0.000
-
-# test mode
-# 0 th: input shape: [10, 3, 32]
-*** diff ***
-        mean: 14.126040,
-        std: 227.823
-# 1 th: input shape: [10, 3, 32, 32]
-*** diff ***
-        mean: -0.286635,
-        std: 221.926
-# 2 th: input shape: [10, 3, 32, 32, 32]
-*** diff ***
-        mean: -0.064297,
-        std: 222.492
-"""

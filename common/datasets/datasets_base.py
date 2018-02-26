@@ -1,9 +1,4 @@
-import os
-import numpy as np
-import six
-import json
 import cv2
-from io import BytesIO
 from chainer.dataset import dataset_mixin
 import numpy as np
 
@@ -17,32 +12,10 @@ class datasets_base(dataset_mixin.DatasetMixin):
 
     def preprocess_image(self, img):
         img = img.astype("f")
-        # img = img / 127.5 - 1
         img = img / 255
         img = (img - 0.5) / 0.5
         img = img.transpose((2, 0, 1))
         return img
-
-    def preprocess_batch_image(self, img):
-        img = img.astype("f")
-        img = img / 127.5 - 1
-        img = img.transpose((0, 3, 1, 2))
-        return img
-
-    def postprocess_image(self, img):
-        img = (img + 1) *127.5
-        img = np.clip(img, 0, 255)
-        img = img.astype(np.uint8)
-        img.transpose((1, 2, 0))
-        return img
-
-    def read_image_key_file_plaintext(self, file):
-        with open(file,'r') as f:
-            lines = f.readlines()
-        return [i.strip() for i in lines]
-
-    def read_image_key_file_json(self, file):
-        return json.load(open(file ,"r"))
 
     def do_random_crop(self, img, crop_to):
         sz0 = img.shape[0]

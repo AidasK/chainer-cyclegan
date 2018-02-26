@@ -1,8 +1,5 @@
-import numpy as np
-import chainer
 import os
 import glob
-from chainer import cuda, optimizers, serializers, Variable
 import cv2
 import json
 from .datasets_base import datasets_base
@@ -15,8 +12,7 @@ class image_pairs_train(datasets_base):
             self.train_a_key.extend(glob.glob(os.path.join(dataset_a, "*.png")))
             self.train_a_key.extend(glob.glob(os.path.join(dataset_a, "*.tif")))
             if len(self.train_a_key) == 0:
-                print("No .jpg or .png or .tif file in " + dataset_a)
-                raise Exception
+                raise Exception("No .jpg or .png or .tif file in " + dataset_a)
         elif dataset_a.lower().endswith(('.json')):
             with open(dataset_a,'r') as f:
                 self.train_a_key = json.load(f)
@@ -28,8 +24,7 @@ class image_pairs_train(datasets_base):
             self.train_b_key.extend(glob.glob(os.path.join(dataset_b, "*.png")))
             self.train_b_key.extend(glob.glob(os.path.join(dataset_b, "*.tif")))
             if len(self.train_b_key) == 0:
-                print("No .jpg or .png or .tif file in " + dataset_b)
-                raise Exception
+                raise Exception("No .jpg or .png or .tif file in " + dataset_b)
             import random
             random.shuffle(self.train_b_key)
         elif dataset_a.lower().endswith(('.json')):
@@ -45,17 +40,13 @@ class image_pairs_train(datasets_base):
         return min(len(self.train_a_key), len(self.train_b_key))
 
     def get_example(self, i):
-        #np.random.seed(None)
-        #idA = self.train_a_key[np.random.randint(0, len(self.train_a_key))]
         idA = self.train_a_key[i % len(self.train_a_key)]
-        #idB = self.train_b_key[np.random.randint(0, len(self.train_b_key))]
         current_epoch = i // len(self.train_b_key)
         if current_epoch > self.epoch:
             self.epoch = current_epoch
             import random
             random.shuffle(self.train_b_key)
         idB = self.train_b_key[i%len(self.train_b_key)]
-        #print(idA)
 
         imgA = cv2.imread(idA, cv2.IMREAD_COLOR)
         imgB = cv2.imread(idB, cv2.IMREAD_COLOR)

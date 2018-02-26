@@ -9,5 +9,3 @@ try:
     from .optimizer import make_rmsprop_mn
 except:
     pass
-from .image_processing import resize_dataset_image
-from .image_processing import resize_batch_dataset_image

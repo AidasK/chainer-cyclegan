@@ -1,16 +1,12 @@
 #!/usr/bin/env python
 import argparse
-import os
-import sys
-import chainer
 from chainer import training
-from chainer import cuda, serializers
 from chainer.training import extensions
 from updater import *
 import common.datasets as datasets
 from common.models.discriminators import *
 from common.models.transformers import *
-from common.evaluation.cyclegan import *
+from common.evaluation.visualization import *
 from common.utils import *
 
 def main():
@@ -40,56 +36,57 @@ def main():
 
     parser.add_argument("--resume", type = str, help='trainer snapshot to be resumed')
 
-    parser.add_argument("--load_gen_f_model", default='', help='load generator model')
-    parser.add_argument("--load_gen_g_model", default='', help='load generator model')
-    parser.add_argument("--load_dis_x_model", default='', help='load discriminator model')
-    parser.add_argument("--load_dis_y_model", default='', help='load discriminator model')
+    parser.add_argument("--load_gen_f_model", type=str, help='load generator model')
+    parser.add_argument("--load_gen_g_model", type=str, help='load generator model')
+    parser.add_argument("--load_dis_x_model", type=str, help='load discriminator model')
+    parser.add_argument("--load_dis_y_model", type=str, help='load discriminator model')
 
-    parser.add_argument("--resize_to", type=int, default=280, help='resize the image to')
+    parser.add_argument("--resize_to", type=int, default=286, help='resize the image to')
     parser.add_argument("--crop_to", type=int, default=256, help='crop the resized image to')
 
     parser.add_argument("--lambda1", type=float, default=10.0, help='lambda for reconstruction loss')
     parser.add_argument("--lambda2", type=float, default=1.0, help='lambda for adversarial loss')
     parser.add_argument("--lambda_idt", type=float, default=0.5, help='lambda for identity mapping loss')
 
-    parser.add_argument("--cfmap_loss", type=int, choices = [0,1,2], help='use of cfmap loss 0: penalize gen, 1: penalize dis, 2: penalize both')
-    parser.add_argument("--lambda_cfmap", type=float, default=1.0,
-                        help='lambda for cfmap loss')
+    parser.add_argument("--bufsize", type=int, default=50, help='size of buffer')
 
+    # parser.add_argument("--cfmap_loss", type=int, choices = [0,1,2], help='use of cfmap loss 0: penalize gen, 1: penalize dis, 2: penalize both')
+    # parser.add_argument("--lambda_cfmap", type=float, default=1.0,
+    #                     help='lambda for cfmap loss')
 
     parser.add_argument("--learning_rate_anneal", type=float, default=0.000002, help='anneal the learning rate')
     parser.add_argument("--learning_rate_anneal_interval", type=int, default=1000, help='interval of learning rate anneal')
     parser.add_argument("--learning_rate_anneal_trigger", type=int, default=100000, help='trigger of learning rate anneal')
 
     parser.add_argument("--norm", type=str, default='instance', choices = ['instance','bn','None'], help='normalization method')
-    parser.add_argument("--upsample", type=str, default='up_unpooling', choices=['up_unpooling', 'up_subpixel'],
-                        help='upsample method')
-    parser.add_argument("--reflect", type=int, default=0, choices = [0,1,2], help='flag of using reflect padding - 0: non use, 1: at the begining, 2: each time')
+    parser.add_argument("--reflect", type=int, default=2, choices = [0,1,2], help='flag of using reflect padding - 0: no use, 1: at the begining, 2: each time')
 
     args = parser.parse_args()
     print(args)
 
     if args.gpu >= 0:
-        chainer.cuda.get_device(args.gpu).use()
+        chainer.cuda.get_device_from_id(args.gpu).use()
 
-    gen_g = ResNetImageTransformer(norm_func=args.norm, upsampling=args.upsample, reflect=args.reflect)
-    gen_f = ResNetImageTransformer(norm_func=args.norm, upsampling=args.upsample, reflect=args.reflect)
-    dis_x = DCGANDiscriminator(base_size=64, conv_as_last=True)
-    dis_y = DCGANDiscriminator(base_size=64, conv_as_last=True)
+    if args.norm == 'None': args.norm = None
 
-    if args.load_gen_g_model != '':
+    gen_g = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
+    gen_f = ResNetImageTransformer(norm_func=args.norm, reflect=args.reflect)
+    dis_x = DCGANDiscriminator(norm=args.norm)
+    dis_y = DCGANDiscriminator(norm=args.norm)
+
+    if args.load_gen_g_model:
         serializers.load_npz(args.load_gen_g_model, gen_g)
         print("Generator G(X->Y) model loaded")
 
-    if args.load_gen_f_model != '':
+    if args.load_gen_f_model:
         serializers.load_npz(args.load_gen_f_model, gen_f)
         print("Generator F(Y->X) model loaded")
 
-    if args.load_dis_x_model != '':
+    if args.load_dis_x_model:
         serializers.load_npz(args.load_dis_x_model, dis_x)
         print("Discriminator X model loaded")
 
-    if args.load_dis_y_model != '':
+    if args.load_dis_y_model:
         serializers.load_npz(args.load_dis_y_model, dis_y)
         print("Discriminator Y model loaded")
 
@@ -113,16 +110,12 @@ def main():
     if args.data_test_x:
         test_dataset = datasets.image_pairs_train(args.data_test_x, args.data_test_y,
             resize_to=args.crop_to, crop_to=args.crop_to)
-        test_iter = chainer.iterators.SerialIterator(test_dataset, 1)
-    else:
-        test_iter = chainer.iterators.SerialIterator(train_dataset, 1)
 
     # Set up a trainer
     updater = Updater(
         models=(gen_g, gen_f, dis_x, dis_y),
         iterator={
             'main': train_iter,
-            'test': test_iter
             },
         optimizer={
             'gen_g': opt_g,
@@ -136,12 +129,12 @@ def main():
             'lambda2': args.lambda2,
             'lambda_idt': args.lambda_idt,
             'image_size' : args.crop_to,
-            'buffer_size' : 50,
+            'buffer_size' : args.bufsize,
             'learning_rate_anneal' : args.learning_rate_anneal,
             'learning_rate_anneal_trigger' : args.learning_rate_anneal_trigger,
             'learning_rate_anneal_interval' : args.learning_rate_anneal_interval,
-            'cfmap_loss' : args.cfmap_loss,
-            'lambda_cfmap' : args.lambda_cfmap,
+            # 'cfmap_loss' : args.cfmap_loss,
+            # 'lambda_cfmap' : args.lambda_cfmap,
         })
 
 
@@ -161,8 +154,8 @@ def main():
 
     log_keys = ['epoch', 'iteration', 'gen_g/loss_rec', 'gen_f/loss_rec', 'gen_g/loss_adv',
                 'gen_f/loss_adv', 'gen_g/loss_idt', 'gen_f/loss_idt', 'dis_x/loss', 'dis_y/loss']
-    if args.cfmap_loss != None:
-        log_keys += ['loss_cfmap_X', 'loss_cfmap_Y']
+    # if args.cfmap_loss != None:
+    #     log_keys += ['loss_cfmap_X', 'loss_cfmap_Y']
 
     trainer.extend(extensions.LogReport(keys=log_keys, trigger=(20, 'iteration')))
     trainer.extend(extensions.PrintReport(log_keys), trigger=(20, 'iteration'))
@@ -175,7 +168,7 @@ def main():
 
     eval_interval = (args.eval_interval, 'iteration')
     trainer.extend(
-        cyclegan_sampling(gen_g, gen_f, eval_dataset, args.out+"/preview/", 1),
+        visualization(gen_g, gen_f, eval_dataset, os.path.join(args.out, 'preview'), 1),
         trigger=eval_interval
     )
 
