@@ -11,6 +11,9 @@ from common.models.net import *
 from common.utils import *
 from updater import *
 
+import matplotlib
+matplotlib.use('Agg')
+
 def main():
     parser = argparse.ArgumentParser(
         description='Train CycleGAN')
