@@ -2,7 +2,7 @@ from .ops import *
 
 class ResNetImageTransformer(chainer.Chain):
     def __init__(self, base_channels=32, norm_func='instance', init_std=0.02, down_layers=2,
-                 res_layers=9, up_layers=2, reflect=0, norm_learnable=True, normalize_grad=False):
+                 res_layers=9, up_layers=2, reflect=0, norm_learnable=True, normalize_grad=True):
         layers = {}
         self.down_layers = down_layers
         self.res_layers = res_layers
