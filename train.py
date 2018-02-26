@@ -76,8 +76,8 @@ def main():
 
     gen_g = Generator(norm=args.norm, reflect=not(args.no_reflect))
     gen_f = Generator(norm=args.norm, reflect=not(args.no_reflect))
-    dis_x = DCGANDiscriminator(norm=args.norm)
-    dis_y = DCGANDiscriminator(norm=args.norm)
+    dis_x = Discriminator(norm=args.norm)
+    dis_y = Discriminator(norm=args.norm)
 
     if args.load_gen_g_model:
         serializers.load_npz(args.load_gen_g_model, gen_g)
