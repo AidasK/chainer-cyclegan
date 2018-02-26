@@ -169,7 +169,8 @@ def main():
     if extensions.PlotReport.available():
         trainer.extend(
             extensions.PlotReport(
-                log_keys, 'iteration',
+                ['epoch', 'gen_g/loss_rec', 'gen_f/loss_rec', 'gen_g/loss_adv',
+                 'gen_f/loss_adv', 'gen_g/loss_idt', 'gen_f/loss_idt', 'dis_x/loss', 'dis_y/loss'], 'iteration',
                 trigger=(100, 'iteration'), file_name='loss.png'))
 
     if args.data_test_x:
