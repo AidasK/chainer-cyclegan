@@ -4,7 +4,6 @@ import chainer
 import chainer.functions as F
 import chainer.links as L
 
-# from instance_normalization import InstanceNormalization
 from common.instance_norm_v2 import InstanceNormalization
 
 def reflectPad(x, pad):
@@ -140,12 +139,12 @@ class CNA(chainer.Chain):
 
 
 class Generator(chainer.Chain):
-    def __init__(self, norm='instance', n_resblock=9,pad_type = 'reflect'):
+    def __init__(self, norm='instance', n_resblock=9, reflect =True):
         super(Generator, self).__init__()
         self.n_resblock = n_resblock
         with self.init_scope():
             # nn.ReflectionPad2d in original
-            if pad_type == 'reflect':
+            if reflect:
                 self.c1 = CNA(3, 32, norm=norm, sample='none-7_nopad')
             else:
                 self.c1 = CNA(3, 32, norm=norm, sample='none-7')
@@ -158,23 +157,23 @@ class Generator(chainer.Chain):
                     CNA(128, 64, norm=norm, sample='up'))
             setattr(self, 'c' + str(n_resblock + 5),
                     CNA(64, 32, norm=norm, sample='up'))
-            if pad_type == 'reflect':
+            if reflect == 'reflect':
                 setattr(self, 'c' + str(n_resblock + 6),
                         CNA(32, 3, norm=norm, sample='none-7_nopad', activation=F.tanh))
             else:
                 setattr(self, 'c' + str(n_resblock + 6),
                         CNA(32, 3, norm=norm, sample='none-7', activation=F.tanh))
-            self.pad_type= pad_type
+            self.reflect= reflect
 
     def __call__(self, x):
-        if self.pad_type == 'reflect':
+        if self.reflect:
             h = reflectPad(x,3)
             h = self.c1(h)
         else:
             h = self.c1(x)
         for i in range(2, self.n_resblock + 6):
             h = getattr(self, 'c' + str(i))(h)
-        if self.pad_type == 'reflect':
+        if self.reflect:
             h = reflectPad(h,3)
         h = getattr(self, 'c' + str(self.n_resblock + 6))(h)
         return h
