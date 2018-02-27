@@ -157,10 +157,10 @@ class Generator(chainer.Chain):
                     CNA(64, 32, norm=norm, sample='up'))
             if reflect:
                 setattr(self, 'c' + str(n_resblock + 6),
-                        CNA(32, 3, norm=norm, sample='none-7_nopad', activation=F.tanh))
+                        CNA(32, 3, norm=None, sample='none-7_nopad', activation=F.tanh))
             else:
                 setattr(self, 'c' + str(n_resblock + 6),
-                        CNA(32, 3, norm=norm, sample='none-7', activation=F.tanh))
+                        CNA(32, 3, norm=None, sample='none-7', activation=F.tanh))
             self.reflect= reflect
 
     def __call__(self, x):
