@@ -6,13 +6,29 @@ from chainer.training import extensions
 
 import common.datasets as datasets
 from common.evaluation.visualization import *
-from common.models.discriminators import *
+# from common.models.discriminators import *
 from common.models.net import *
+# from networks import *
 from common.utils import *
 from updater import *
 
 import matplotlib
 matplotlib.use('Agg')
+
+class SingletonArgs():
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(SingletonArgs, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
+
+    def set_args(self, args):
+        self._args = args
+        return self._args
+
+    def get_args(self):
+        return self._args
 
 def main():
     parser = argparse.ArgumentParser(
@@ -65,9 +81,14 @@ def main():
 
     parser.add_argument("--norm", type=str, default='instance', choices = ['instance','bn','None'], help='normalization method')
     parser.add_argument("--no_reflect", action='store_true')
+    parser.add_argument("--norm_noaffine", action='store_true')
+    parser.add_argument("--norm_gnorm", action='store_true')
 
     args = parser.parse_args()
     print(args)
+
+    args_s = SingletonArgs()
+    args_s.set_args(args)
 
     if args.gpu >= 0:
         chainer.cuda.get_device_from_id(args.gpu).use()
@@ -78,6 +99,17 @@ def main():
     gen_f = Generator(norm=args.norm, reflect=not(args.no_reflect))
     dis_x = Discriminator(norm=args.norm)
     dis_y = Discriminator(norm=args.norm)
+
+    #debug
+
+    x = np.ones((1, 3, 300, 300)).astype(np.float32)
+    x = Variable(x)
+
+    y = gen_g(x)
+    z = dis_x(y)
+
+
+
 
     if args.load_gen_g_model:
         serializers.load_npz(args.load_gen_g_model, gen_g)
