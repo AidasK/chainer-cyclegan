@@ -36,15 +36,27 @@ class HistoricalBuffer():
             indices_rand = np.random.permutation(len(data))
 
             avail_buf = min(self._cnt, use_buf)
+            # if avail_buf > 0:
+            #     indices_use_buf = np.random.choice(self._cnt,avail_buf,replace=False)
+            #     data[indices_rand[-avail_buf:],:] = xp.asarray(self._buffer[indices_use_buf,:])
+            # room_buf = self._buffer_size - self._cnt
+            # n_replace_buf = min(self._cnt,len(data)-avail_buf-room_buf)
+            # if n_replace_buf > 0:
+            #     indices_replace_buf = np.random.choice(self._cnt,n_replace_buf,replace=False)
+            #     self._buffer[indices_replace_buf,:] =  chainer.cuda.to_cpu(data[indices_rand[-avail_buf-n_replace_buf:-avail_buf],:]) \
+            #         if self.gpu == -1 else data[indices_rand[-avail_buf-n_replace_buf:-avail_buf],:]
+            # if room_buf > 0:
+            #     n_fill_buf = min(room_buf, len(data)-avail_buf)
+            #     self._buffer[self._cnt:self._cnt+n_fill_buf,:] = chainer.cuda.to_cpu(data[indices_rand[0:n_fill_buf],:]) \
+            #         if self.gpu == -1 else data[indices_rand[0:n_fill_buf],:]
+            #     self._cnt += n_fill_buf
+            # return data
             if avail_buf > 0:
                 indices_use_buf = np.random.choice(self._cnt,avail_buf,replace=False)
+                tmp = xp.copy(data[indices_rand[-avail_buf:], :])
                 data[indices_rand[-avail_buf:],:] = xp.asarray(self._buffer[indices_use_buf,:])
+                self._buffer[indices_use_buf, :] = chainer.cuda.to_cpu(tmp) if self.gpu == -1 else tmp
             room_buf = self._buffer_size - self._cnt
-            n_replace_buf = min(self._cnt,len(data)-avail_buf-room_buf)
-            if n_replace_buf > 0:
-                indices_replace_buf = np.random.choice(self._cnt,n_replace_buf,replace=False)
-                self._buffer[indices_replace_buf,:] =  chainer.cuda.to_cpu(data[indices_rand[-avail_buf-n_replace_buf:-avail_buf],:]) \
-                    if self.gpu == -1 else data[indices_rand[-avail_buf-n_replace_buf:-avail_buf],:]
             if room_buf > 0:
                 n_fill_buf = min(room_buf, len(data)-avail_buf)
                 self._buffer[self._cnt:self._cnt+n_fill_buf,:] = chainer.cuda.to_cpu(data[indices_rand[0:n_fill_buf],:]) \
@@ -77,7 +89,6 @@ class Updater(chainer.training.StandardUpdater):
         self._buffer_x = HistoricalBuffer(self._max_buffer_size, self._image_size)
         self._buffer_y = HistoricalBuffer(self._max_buffer_size, self._image_size)
         super(Updater, self).__init__(*args, **kwargs)
-
 
     def loss_func_rec_l1(self, x_out, t):
         return F.mean_absolute_error(x_out, t)
