@@ -111,13 +111,13 @@ class ResBlock(chainer.Chain):
             d[name].serialize(serializer[name])
 
     def __call__(self, x):
-        # if self.reflect == 0:
-        #     _pad = self.c0.W.shape[2] // 2
-        #     self.c0.pad = (_pad, _pad)
-        #     self.c1.pad = (_pad, _pad)
-        # else:
-        #     self.c0.pad = (0,0)
-        #     self.c1.pad = (0,0)
+        if self.reflect == 0:
+            _pad = self.c0.W.shape[2] // 2
+            self.c0.pad = (_pad, _pad)
+            self.c1.pad = (_pad, _pad)
+        else:
+            self.c0.pad = (0,0)
+            self.c1.pad = (0,0)
         if self.reflect == 2:
             # h = F.pad(x, ((0, 0), (0, 0), (1, 1), (1, 1)), mode='reflect') << 'reflect' is not currently supported(v3)
             h = reflectPad(x, 1)
