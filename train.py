@@ -100,10 +100,10 @@ def main():
     # gen_f = Generator(norm=args.norm, reflect=not(args.no_reflect))
     # dis_x = Discriminator(norm=args.norm)
     # dis_y = Discriminator(norm=args.norm)
-    gen_g = ResNetImageTransformer()
-    gen_f = ResNetImageTransformer()
-    dis_x = DCGANDiscriminator(norm='instance')
-    dis_y = DCGANDiscriminator(norm='instance')
+    gen_g = ResNetImageTransformer(norm=args.norm)
+    gen_f = ResNetImageTransformer(norm=args.norm)
+    dis_x = DCGANDiscriminator(norm=args.norm)
+    dis_y = DCGANDiscriminator(norm=args.norm)
 
     #debug
     #
