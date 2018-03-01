@@ -6,8 +6,9 @@ from chainer.training import extensions
 
 import common.datasets as datasets
 from common.evaluation.visualization import *
-# from common.models.discriminators import *
-from common.models.net import *
+from common.models.discriminators import *
+from common.models.transformers import *
+# from common.models.net import *
 # from networks import *
 from common.utils import *
 from updater import *
@@ -15,20 +16,20 @@ from updater import *
 import matplotlib
 matplotlib.use('Agg')
 
-class SingletonArgs():
-    _instance = None
-
-    def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            cls._instance = super(SingletonArgs, cls).__new__(cls, *args, **kwargs)
-        return cls._instance
-
-    def set_args(self, args):
-        self._args = args
-        return self._args
-
-    def get_args(self):
-        return self._args
+# class SingletonArgs():
+#     _instance = None
+#
+#     def __new__(cls, *args, **kwargs):
+#         if not cls._instance:
+#             cls._instance = super(SingletonArgs, cls).__new__(cls, *args, **kwargs)
+#         return cls._instance
+#
+#     def set_args(self, args):
+#         self._args = args
+#         return self._args
+#
+#     def get_args(self):
+#         return self._args
 
 def main():
     parser = argparse.ArgumentParser(
@@ -87,26 +88,30 @@ def main():
     args = parser.parse_args()
     print(args)
 
-    args_s = SingletonArgs()
-    args_s.set_args(args)
+    # args_s = SingletonArgs()
+    # args_s.set_args(args)
 
     if args.gpu >= 0:
         chainer.cuda.get_device_from_id(args.gpu).use()
 
     if args.norm == 'None': args.norm = None
 
-    gen_g = Generator(norm=args.norm, reflect=not(args.no_reflect))
-    gen_f = Generator(norm=args.norm, reflect=not(args.no_reflect))
-    dis_x = Discriminator(norm=args.norm)
-    dis_y = Discriminator(norm=args.norm)
+    # gen_g = Generator(norm=args.norm, reflect=not(args.no_reflect))
+    # gen_f = Generator(norm=args.norm, reflect=not(args.no_reflect))
+    # dis_x = Discriminator(norm=args.norm)
+    # dis_y = Discriminator(norm=args.norm)
+    gen_g = ResNetImageTransformer()
+    gen_f = ResNetImageTransformer()
+    dis_x = DCGANDiscriminator(norm='instance')
+    dis_y = DCGANDiscriminator(norm='instance')
 
     #debug
-
-    x = np.ones((1, 3, 300, 300)).astype(np.float32)
-    x = Variable(x)
-
-    y = gen_g(x)
-    z = dis_x(y)
+    #
+    # x = np.ones((1, 3, 300, 300)).astype(np.float32)
+    # x = Variable(x)
+    #
+    # y = gen_g(x)
+    # z = dis_x(y)
 
 
 
