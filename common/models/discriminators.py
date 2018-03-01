@@ -2,7 +2,7 @@ from .ops import *
 
 class DCGANDiscriminator(chainer.Chain):
     def __init__(self, in_ch=3, base_size=64, down_layers=3, norm='bn', init_std=0.02, w_init=None, \
-                 norm_learnable=True, normalize_grad=True):
+                 norm_learnable=True, normalize_grad=False):
         layers = {}
 
         self.down_layers = down_layers
