@@ -32,6 +32,7 @@ class HistoricalBuffer():
                 else:
                     return xp.expand_dims(xp.asarray(self._buffer[np.random.randint(self._cnt),:]),axis=0)
         else:
+            data = xp.copy(data)
             use_buf = len(data) // 2
             indices_rand = np.random.permutation(len(data))
 
