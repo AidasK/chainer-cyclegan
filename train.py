@@ -81,9 +81,9 @@ def main():
     parser.add_argument("--learning_rate_anneal_trigger", type=int, default=100000, help='trigger of learning rate anneal')
 
     parser.add_argument("--norm", type=str, default='instance', choices = ['instance','bn','None'], help='normalization method')
-    parser.add_argument("--no_reflect", action='store_true')
-    parser.add_argument("--norm_noaffine", action='store_true')
-    parser.add_argument("--norm_gnorm", action='store_true')
+    parser.add_argument("--reflect", type=int, choices = [0,1,2],default=2, help='reflect padding setting 0: no use, 1: at the beginning, 2: each time')
+    # parser.add_argument("--norm_noaffine", action='store_true')
+    # parser.add_argument("--norm_gnorm", action='store_true')
 
     args = parser.parse_args()
     print(args)
@@ -100,8 +100,8 @@ def main():
     # gen_f = Generator(norm=args.norm, reflect=not(args.no_reflect))
     # dis_x = Discriminator(norm=args.norm)
     # dis_y = Discriminator(norm=args.norm)
-    gen_g = ResNetImageTransformer(norm=args.norm)
-    gen_f = ResNetImageTransformer(norm=args.norm)
+    gen_g = ResNetImageTransformer(norm=args.norm, reflect=args.reflect)
+    gen_f = ResNetImageTransformer(norm=args.norm, reflect=args.reflect)
     dis_x = DCGANDiscriminator(norm=args.norm)
     dis_y = DCGANDiscriminator(norm=args.norm)
 
