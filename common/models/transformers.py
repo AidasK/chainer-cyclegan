@@ -1,7 +1,7 @@
 from .ops import *
 
 class ResNetImageTransformer(chainer.Chain):
-    def __init__(self, base_channels=32, norm_func='instance', init_std=0.02, down_layers=2,
+    def __init__(self, base_channels=32, norm='instance', init_std=0.02, down_layers=2,
                  res_layers=9, up_layers=2, reflect=2, norm_learnable=True, normalize_grad=False):
         layers = {}
         self.down_layers = down_layers
@@ -10,10 +10,9 @@ class ResNetImageTransformer(chainer.Chain):
         self.base_channels = base_channels
         self.reflect = reflect
 
-        if norm_func in ['instance','bn', None]:
-            norm = norm_func
-        else:
+        if norm not in ['instance', 'bn', None]:
             raise NotImplementedError('Specification of normalization function is invalid')
+
         w = chainer.initializers.Normal(init_std)
 
         base = base_channels
