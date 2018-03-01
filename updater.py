@@ -36,37 +36,37 @@ class HistoricalBuffer():
             use_buf = len(data) // 2
             indices_rand = np.random.permutation(len(data))
 
-            # avail_buf = min(self._cnt, use_buf)
-            # if avail_buf > 0:
-            #     indices_use_buf = np.random.choice(self._cnt,avail_buf,replace=False)
-            #     data[indices_rand[-avail_buf:],:] = xp.asarray(self._buffer[indices_use_buf,:])
-            # room_buf = self._buffer_size - self._cnt
-            # n_replace_buf = min(self._cnt,len(data)-avail_buf-room_buf)
-            # if n_replace_buf > 0:
-            #     indices_replace_buf = np.random.choice(self._cnt,n_replace_buf,replace=False)
-            #     self._buffer[indices_replace_buf,:] =  chainer.cuda.to_cpu(data[indices_rand[-avail_buf-n_replace_buf:-avail_buf],:]) \
-            #         if self.gpu == -1 else data[indices_rand[-avail_buf-n_replace_buf:-avail_buf],:]
-            # if room_buf > 0:
-            #     n_fill_buf = min(room_buf, len(data)-avail_buf)
-            #     self._buffer[self._cnt:self._cnt+n_fill_buf,:] = chainer.cuda.to_cpu(data[indices_rand[0:n_fill_buf],:]) \
-            #         if self.gpu == -1 else data[indices_rand[0:n_fill_buf],:]
-            #     self._cnt += n_fill_buf
-            # return data
+            avail_buf = min(self._cnt, use_buf)
+            if avail_buf > 0:
+                indices_use_buf = np.random.choice(self._cnt,avail_buf,replace=False)
+                data[indices_rand[-avail_buf:],:] = xp.asarray(self._buffer[indices_use_buf,:])
             room_buf = self._buffer_size - self._cnt
-            n_fill_buf = 0
+            n_replace_buf = min(self._cnt,len(data)-avail_buf-room_buf)
+            if n_replace_buf > 0:
+                indices_replace_buf = np.random.choice(self._cnt,n_replace_buf,replace=False)
+                self._buffer[indices_replace_buf,:] =  chainer.cuda.to_cpu(data[indices_rand[-avail_buf-n_replace_buf:-avail_buf],:]) \
+                    if self.gpu == -1 else data[indices_rand[-avail_buf-n_replace_buf:-avail_buf],:]
             if room_buf > 0:
-                n_fill_buf = min(room_buf, len(data))
+                n_fill_buf = min(room_buf, len(data)-avail_buf)
                 self._buffer[self._cnt:self._cnt+n_fill_buf,:] = chainer.cuda.to_cpu(data[indices_rand[0:n_fill_buf],:]) \
                     if self.gpu == -1 else data[indices_rand[0:n_fill_buf],:]
                 self._cnt += n_fill_buf
-            rest_data = len(data) - n_fill_buf
-            if rest_data //2 > 0:
-                replace_data = min(rest_data//2, self._cnt, use_buf)
-                indices_use_buf = np.random.choice(self._cnt, replace_data, replace=False)
-                tmp = xp.copy(data[indices_rand[-replace_data:],:])
-                data[indices_rand[-replace_data:], :] = xp.asarray(self._buffer[indices_use_buf, :])
-                self._buffer[indices_use_buf, :] = chainer.cuda.to_cpu(tmp) if self.gpu == -1 else tmp
             return data
+            # room_buf = self._buffer_size - self._cnt
+            # n_fill_buf = 0
+            # if room_buf > 0:
+            #     n_fill_buf = min(room_buf, len(data))
+            #     self._buffer[self._cnt:self._cnt+n_fill_buf,:] = chainer.cuda.to_cpu(data[indices_rand[0:n_fill_buf],:]) \
+            #         if self.gpu == -1 else data[indices_rand[0:n_fill_buf],:]
+            #     self._cnt += n_fill_buf
+            # rest_data = len(data) - n_fill_buf
+            # if rest_data //2 > 0:
+            #     replace_data = min(rest_data//2, self._cnt, use_buf)
+            #     indices_use_buf = np.random.choice(self._cnt, replace_data, replace=False)
+            #     tmp = xp.copy(data[indices_rand[-replace_data:],:])
+            #     data[indices_rand[-replace_data:], :] = xp.asarray(self._buffer[indices_use_buf, :])
+            #     self._buffer[indices_use_buf, :] = chainer.cuda.to_cpu(tmp) if self.gpu == -1 else tmp
+            # return data
 
     def serialize(self, serializer):
         self._cnt = serializer('cnt', self._cnt)
