@@ -67,6 +67,8 @@ def main():
     parser.add_argument("--reflect", type=int, choices = [0,1,2],default=2, help='reflect padding setting 0: no use, 1: at the beginning, 2: each time')
     # parser.add_argument("--norm_noaffine", action='store_true')
     # parser.add_argument("--norm_gnorm", action='store_true')
+    parser.add_argument("--method", type=str, default='default', choices=['default', 'SimGAN', 'GT_L1'],
+                        help='updater method')
 
     args = parser.parse_args()
     print(args)
@@ -109,7 +111,12 @@ def main():
     opt_x=make_adam(dis_x, lr=args.learning_rate_d, beta1=0.5)
     opt_y=make_adam(dis_y, lr=args.learning_rate_d, beta1=0.5)
 
-    train_dataset = datasets.image_pairs_train(args.data_train_x, args.data_train_y,
+    if args.method == "GT_L1":
+        dataset_class = datasets.source_target_dataset
+    else:
+        dataset_class = datasets.image_pairs_train
+
+    train_dataset = dataset_class(args.data_train_x, args.data_train_y,
             resize_to=args.resize_to, crop_to=args.crop_to)
     train_iter = chainer.iterators.MultiprocessIterator(
         train_dataset, args.batchsize, n_processes=4)
@@ -119,7 +126,14 @@ def main():
             resize_to=args.crop_to, crop_to=args.crop_to)
 
     # Set up a trainer
-    updater = Updater(
+    if args.method == "SimGAN":
+        updater_choice = Updater_SimGAN
+    elif args.method == "GT_L1":
+        updater_choice = Updater_gt_l1
+    else:
+        updater_choice = Updater
+
+    updater = updater_choice(
         models=(gen_g, gen_f, dis_x, dis_y),
         iterator={
             'main': train_iter,
@@ -167,11 +181,18 @@ def main():
     trainer.extend(extensions.PrintReport(log_keys), trigger=(20, 'iteration'))
     trainer.extend(extensions.ProgressBar(update_interval=50))
 
+    plotreport_keys = ['epoch', 'gen_g/loss_rec', 'gen_f/loss_rec', 'gen_g/loss_adv',
+                 'gen_f/loss_adv', 'gen_g/loss_idt', 'gen_f/loss_idt', 'dis_x/loss', 'dis_y/loss']
+
+    if args.method == "SimGAN":
+        plotreport_keys += ['gen_g/loss_sim_l1']
+    if args.method == "GT_L1":
+        plotreport_keys += ['gen_g/loss_gen_gt_l1', 'gen_f/loss_gen_gt_l1']
+
     if extensions.PlotReport.available():
         trainer.extend(
             extensions.PlotReport(
-                ['epoch', 'gen_g/loss_rec', 'gen_f/loss_rec', 'gen_g/loss_adv',
-                 'gen_f/loss_adv', 'gen_g/loss_idt', 'gen_f/loss_idt', 'dis_x/loss', 'dis_y/loss'], 'iteration',
+                plotreport_keys, 'iteration',
                 trigger=(100, 'iteration'), file_name='loss.png'))
 
     if args.data_test_x:
