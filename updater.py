@@ -1,7 +1,8 @@
 import chainer
 import six
 from chainer import cuda, optimizers, serializers, Variable
-from common.loss_functions import *
+import numpy as np
+import chainer.functions as F
 
 class HistoricalBuffer():
     def __init__(self, buffer_size=50, image_size=256, image_channels=3, gpu = -1):
@@ -52,21 +53,6 @@ class HistoricalBuffer():
                     if self.gpu == -1 else data[indices_rand[0:n_fill_buf],:]
                 self._cnt += n_fill_buf
             return data
-            # room_buf = self._buffer_size - self._cnt
-            # n_fill_buf = 0
-            # if room_buf > 0:
-            #     n_fill_buf = min(room_buf, len(data))
-            #     self._buffer[self._cnt:self._cnt+n_fill_buf,:] = chainer.cuda.to_cpu(data[indices_rand[0:n_fill_buf],:]) \
-            #         if self.gpu == -1 else data[indices_rand[0:n_fill_buf],:]
-            #     self._cnt += n_fill_buf
-            # rest_data = len(data) - n_fill_buf
-            # if rest_data //2 > 0:
-            #     replace_data = min(rest_data//2, self._cnt, use_buf)
-            #     indices_use_buf = np.random.choice(self._cnt, replace_data, replace=False)
-            #     tmp = xp.copy(data[indices_rand[-replace_data:],:])
-            #     data[indices_rand[-replace_data:], :] = xp.asarray(self._buffer[indices_use_buf, :])
-            #     self._buffer[indices_use_buf, :] = chainer.cuda.to_cpu(tmp) if self.gpu == -1 else tmp
-            # return data
 
     def serialize(self, serializer):
         self._cnt = serializer('cnt', self._cnt)
@@ -147,10 +133,6 @@ class Updater(chainer.training.StandardUpdater):
         self.gen_f.cleargrads()
         self.gen_g.cleargrads()
 
-        # loss_gen_g_adv = self._lambda2 * loss_func_lsgan_dis_real(self.dis_y(x_y))
-        # loss_gen_f_adv = self._lambda2 * loss_func_lsgan_dis_real(self.dis_x(y_x))
-        # loss_cycle_x = self._lambda1 * loss_l1(x_y_x, x)
-        # loss_cycle_y = self._lambda1 * loss_l1(y_x_y, y)
         loss_gen_g_adv = self._lambda2 * self.loss_func_adv_gen(self.dis_y(x_y))
         loss_gen_f_adv = self._lambda2 * self.loss_func_adv_gen(self.dis_x(y_x))
         loss_cycle_x = self._lambda1 * self.loss_func_rec_l1(x_y_x, x)
@@ -171,10 +153,8 @@ class Updater(chainer.training.StandardUpdater):
 
         if self._lambda_idt > 0:
             idtY = self.gen_g(y)
-            # loss_idtY = F.sum(F.absolute_error(idtY,y)) / np.prod(idtY.shape)
             loss_idtY = F.mean_absolute_error(idtY,y)
             idtX = self.gen_f(x)
-            # loss_idtX = F.sum(F.absolute_error(idtX, x)) / np.prod(idtX.shape)
             loss_idtX = F.mean_absolute_error(idtX,x)
             loss_idt = (loss_idtX + loss_idtY) * self._lambda1 * self._lambda_idt
         else:
@@ -203,15 +183,11 @@ class Updater(chainer.training.StandardUpdater):
         self.dis_y.cleargrads()
         self.dis_x.cleargrads()
 
-        # loss_dis_y_fake = loss_func_lsgan_dis_fake(self.dis_y(x_y_copy))
-        # loss_dis_y_real = loss_func_lsgan_dis_real(self.dis_y(y))
         loss_dis_y_fake = self.loss_func_adv_dis_fake(self.dis_y(x_y_copy))
         loss_dis_y_real = self.loss_func_adv_dis_real(self.dis_y(y))
         loss_dis_y = (loss_dis_y_fake + loss_dis_y_real) * 0.5
         chainer.report({'loss': loss_dis_y}, self.dis_y)
 
-        # loss_dis_x_fake = loss_func_lsgan_dis_fake(self.dis_x(y_x_copy))
-        # loss_dis_x_real = loss_func_lsgan_dis_real(self.dis_x(x))
         loss_dis_x_fake = self.loss_func_adv_dis_fake(self.dis_x(y_x_copy))
         loss_dis_x_real = self.loss_func_adv_dis_real(self.dis_x(x))
         loss_dis_x = (loss_dis_x_fake + loss_dis_x_real) * 0.5
