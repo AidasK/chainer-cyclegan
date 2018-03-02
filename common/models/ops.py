@@ -2,7 +2,7 @@ import numpy as np
 import chainer
 import chainer.functions as F
 import chainer.links as L
-from common.instance_norm_v2 import InstanceNormalization
+from common.instance_norm import InstanceNormalization
 
 def reflectPad(x, pad):
     if pad < 0:

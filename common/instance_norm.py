@@ -8,6 +8,7 @@ from chainer import link
 from chainer.functions.normalization import batch_normalization
 from chainer.utils import argument
 from chainer import variable
+import chainer
 
 class Parameter_scale(variable.Parameter):
     def __init__(self, initializer=None, shape=None, name=None,norm_grad = False):
@@ -130,6 +131,8 @@ class InstanceNormalization(link.Link):
             mean = self.xp.asarray(self.avg_mean)
             var = self.xp.asarray(self.avg_var)
 
+        chainer_version = int(chainer.__version__.split('.')[0])
+
         if configuration.config.train:
             if finetune:
                 self.N += 1
@@ -137,9 +140,14 @@ class InstanceNormalization(link.Link):
             else:
                 decay = self.decay
 
-            func = batch_normalization.BatchNormalizationFunction(
-                self.eps, mean, var, decay)
-            ret = func(reshaped_x, gamma, beta)
+            if chainer_version < 3:
+                func = batch_normalization.BatchNormalizationFunction(
+                    self.eps, mean, var, decay)
+                ret = func(reshaped_x, gamma, beta)
+            else:
+                ret = functions.batch_normalization(
+                    reshaped_x, gamma, beta, eps=self.eps, running_mean=mean,
+                    running_var=var, decay=decay)
 
         else:
             head_ndim = gamma.ndim + 1
