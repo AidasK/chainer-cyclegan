@@ -451,9 +451,9 @@ class Updater_gt_l1(chainer.training.StandardUpdater):
         #     x[i, :] = xp.asarray(batch[i][0])
         #     y[i, :] = xp.asarray(batch[i][1])
 
-        x_images = [batch[i][0] for i in range(batchsize)]
-        x_gt_maps = [batch[i][1] for i in range(batchsize)]
-        y_images = [batch[i][2] for i in range(batchsize)]
+        x_images = [xp.asarray(batch[i][0]) for i in range(batchsize)]
+        x_gt_maps = [xp.asarray(batch[i][1]) for i in range(batchsize)]
+        y_images = [xp.asarray(batch[i][2]) for i in range(batchsize)]
 
         x = xp.stack(x_images)
         x_gt_maps =xp.stack(x_gt_maps)
