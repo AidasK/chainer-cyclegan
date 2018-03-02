@@ -487,8 +487,8 @@ class Updater_gt_l1(chainer.training.StandardUpdater):
         loss_cycle_x = self._lambda1 * self.loss_func_rec_l1(x_y_x, x)
         loss_cycle_y = self._lambda1 * self.loss_func_rec_l1(y_x_y, y)
 
-        loss_gen_g_gt_l1 = self._lambda1 * (F.absolute_error(x,x_y) * x_gt_maps / np.prod(x.data.shape))
-        loss_gen_f_gt_l1 = self._lambda1 * (F.absolute_error(x_y,x_y_x) * x_gt_maps / np.prod(x.data.shape))
+        loss_gen_g_gt_l1 = self._lambda1 * F.sum(F.absolute_error(x,x_y) * x_gt_maps / np.prod(x.data.shape))
+        loss_gen_f_gt_l1 = self._lambda1 * F.sum(F.absolute_error(x_y,x_y_x) * x_gt_maps / np.prod(x.data.shape))
         loss_gen_gt_l1 = loss_gen_g_gt_l1 + loss_gen_f_gt_l1
 
         # if self._cfmap_loss in [0,2]:
