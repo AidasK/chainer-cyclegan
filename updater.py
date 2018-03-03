@@ -708,7 +708,7 @@ class Updater_SimGAN_gt_l1(chainer.training.StandardUpdater):
         chainer.report({'loss_adv': loss_gen_g_adv}, self.gen_g)
         # chainer.report({'loss_adv': loss_gen_f_adv}, self.gen_f)
         chainer.report({'loss_idt': loss_idtY}, self.gen_g)
-        chainer.report({'loss_idt': loss_idtX}, self.gen_f)
+        # chainer.report({'loss_idt': loss_idtX}, self.gen_f)
         chainer.report({'loss_sim_l1': loss_gen_g_l1}, self.gen_g)
         # chainer.report({'loss_gen_gt_l1': loss_gen_f_gt_l1}, self.gen_f)
         # if self._cfmap_loss != None:
