@@ -668,7 +668,7 @@ class Updater_SimGAN_gt_l1(chainer.training.StandardUpdater):
 
         loss_gen_g_adv = self._lambda2 * self.loss_func_adv_gen(self.dis_y(x_y))
         loss_gen_g_l1 = F.absolute_error(x, x_y)
-        weight_map = xp.ones(x_gt_maps.shape)*self._lambda_idt + x_gt_maps*(1-self._lambda_idt)
+        weight_map = xp.ones(x_gt_maps.shape).astype("f")*self._lambda_idt + x_gt_maps*(1-self._lambda_idt)
         weight_map = Variable(weight_map)
         loss_gen_g_l1 = F.sum(loss_gen_g_l1 * weight_map) * self._lambda1
         # loss_gen_f_adv = self._lambda2 * self.loss_func_adv_gen(self.dis_x(y_x))
