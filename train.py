@@ -25,6 +25,8 @@ def main():
                         help='Directory to output the result')
     parser.add_argument('--eval_interval', type=int, default=400,
                         help='Interval of evaluating generator')
+    parser.add_argument('--vis_batch', type=int, default=1,
+                        help='number of images for visualization')
 
     parser.add_argument('--snapshot_interval', type=int, default=4000,
                         help='Interval of model snapshot')
@@ -67,7 +69,7 @@ def main():
     parser.add_argument("--reflect", type=int, choices = [0,1,2],default=2, help='reflect padding setting 0: no use, 1: at the beginning, 2: each time')
     # parser.add_argument("--norm_noaffine", action='store_true')
     # parser.add_argument("--norm_gnorm", action='store_true')
-    parser.add_argument("--method", type=str, default='default', choices=['default', 'SimGAN', 'GT_L1'],
+    parser.add_argument("--method", type=str, default='default', choices=['default', 'SimGAN', 'GT_L1','SimGAN_GT_L1'],
                         help='updater method')
 
     args = parser.parse_args()
@@ -130,6 +132,8 @@ def main():
         updater_choice = Updater_SimGAN
     elif args.method == "GT_L1":
         updater_choice = Updater_gt_l1
+    elif args.method == 'SimGAN_GT_L1':
+        updater_choice = Updater_SimGAN_gt_l1
     else:
         updater_choice = Updater
 
@@ -184,7 +188,7 @@ def main():
     plotreport_keys = ['epoch', 'gen_g/loss_rec', 'gen_f/loss_rec', 'gen_g/loss_adv',
                  'gen_f/loss_adv', 'gen_g/loss_idt', 'gen_f/loss_idt', 'dis_x/loss', 'dis_y/loss']
 
-    if args.method == "SimGAN":
+    if args.method in ["SimGAN",'SimGAN_GT_L1']:
         plotreport_keys += ['gen_g/loss_sim_l1']
     if args.method == "GT_L1":
         plotreport_keys += ['gen_g/loss_gen_gt_l1', 'gen_f/loss_gen_gt_l1']
@@ -202,7 +206,7 @@ def main():
 
     eval_interval = (args.eval_interval, 'iteration')
     trainer.extend(
-        visualization(gen_g, gen_f, eval_dataset, os.path.join(args.out, 'preview'), 1),
+        visualization(gen_g, gen_f, eval_dataset, os.path.join(args.out, 'preview'), args.vis_batch),
         trigger=eval_interval
     )
 
