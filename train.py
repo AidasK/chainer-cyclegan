@@ -113,7 +113,7 @@ def main():
     opt_x=make_adam(dis_x, lr=args.learning_rate_d, beta1=0.5)
     opt_y=make_adam(dis_y, lr=args.learning_rate_d, beta1=0.5)
 
-    if args.method == "GT_L1":
+    if args.method in ["GT_L1","SimGAN_GT_L1"]:
         dataset_class = datasets.source_target_dataset
     else:
         dataset_class = datasets.image_pairs_train
