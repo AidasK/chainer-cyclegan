@@ -412,6 +412,7 @@ class Updater_gt_l1(chainer.training.StandardUpdater):
         self._learning_rate_anneal_trigger = params['learning_rate_anneal_trigger']
         self._image_size = params['image_size']
         self._max_buffer_size = params['buffer_size']
+        self._lambda_GT_L1 = params["lambda_GT_L1"]
         self.xp = self.gen_g.xp
         # self._cfmap_loss = params['cfmap_loss']
         # self._lambda_cfmap = params['lambda_cfmap']
@@ -487,8 +488,8 @@ class Updater_gt_l1(chainer.training.StandardUpdater):
         loss_cycle_x = self._lambda1 * self.loss_func_rec_l1(x_y_x, x)
         loss_cycle_y = self._lambda1 * self.loss_func_rec_l1(y_x_y, y)
 
-        loss_gen_g_gt_l1 = self._lambda1 * F.sum(F.absolute_error(x,x_y) * x_gt_maps / np.prod(x.data.shape))
-        loss_gen_f_gt_l1 = self._lambda1 * F.sum(F.absolute_error(x_y,x_y_x) * x_gt_maps / np.prod(x.data.shape))
+        loss_gen_g_gt_l1 = self._lambda_GT_L1 * F.sum(F.absolute_error(x,x_y) * x_gt_maps / np.prod(x.data.shape))
+        loss_gen_f_gt_l1 = self._lambda_GT_L1 * F.sum(F.absolute_error(x_y,x_y_x) * x_gt_maps / np.prod(x.data.shape))
         loss_gen_gt_l1 = loss_gen_g_gt_l1 + loss_gen_f_gt_l1
 
         # if self._cfmap_loss in [0,2]:

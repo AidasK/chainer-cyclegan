@@ -54,6 +54,7 @@ def main():
     parser.add_argument("--lambda1", type=float, default=10.0, help='lambda for reconstruction loss')
     parser.add_argument("--lambda2", type=float, default=1.0, help='lambda for adversarial loss')
     parser.add_argument("--lambda_idt", type=float, default=0.5, help='lambda for identity mapping loss')
+    parser.add_argument("--lambda_GT_L1", type=float, default=10, help='lambda for L1 of GT')
 
     parser.add_argument("--bufsize", type=int, default=50, help='size of buffer')
 
@@ -137,6 +138,21 @@ def main():
     else:
         updater_choice = Updater
 
+    params = {
+            'lambda1': args.lambda1,
+            'lambda2': args.lambda2,
+            'lambda_idt': args.lambda_idt,
+            'image_size' : args.crop_to,
+            'buffer_size' : args.bufsize,
+            'learning_rate_anneal' : args.learning_rate_anneal,
+            'learning_rate_anneal_trigger' : args.learning_rate_anneal_trigger,
+            'learning_rate_anneal_interval' : args.learning_rate_anneal_interval,
+            # 'cfmap_loss' : args.cfmap_loss,
+            # 'lambda_cfmap' : args.lambda_cfmap,
+        }
+    if args.method in ['GT_L1']:
+        params["lambda_GT_L1"] = args.lambda_GT_L1
+
     updater = updater_choice(
         models=(gen_g, gen_f, dis_x, dis_y),
         iterator={
@@ -149,18 +165,7 @@ def main():
             'dis_y': opt_y
             },
         device=args.gpu,
-        params={
-            'lambda1': args.lambda1,
-            'lambda2': args.lambda2,
-            'lambda_idt': args.lambda_idt,
-            'image_size' : args.crop_to,
-            'buffer_size' : args.bufsize,
-            'learning_rate_anneal' : args.learning_rate_anneal,
-            'learning_rate_anneal_trigger' : args.learning_rate_anneal_trigger,
-            'learning_rate_anneal_interval' : args.learning_rate_anneal_interval,
-            # 'cfmap_loss' : args.cfmap_loss,
-            # 'lambda_cfmap' : args.lambda_cfmap,
-        })
+        params=params)
 
     trainer = training.Trainer(updater, (args.max_iter, 'iteration'), out=args.out)
 
