@@ -54,6 +54,9 @@ class source_target_dataset(datasets_base):
 
         imgA_gt_map = np.zeros(imgA.shape).astype("f")
 
+        bbox = []
+        label = []
+
         with open(annotation_file, "r") as annotations:
             line = annotations.readline()
             while (line):
@@ -63,12 +66,14 @@ class source_target_dataset(datasets_base):
                 xmax = int(xmax)
                 ymax = int(ymax)
                 imgA_gt_map[...,ymin-1:ymax,xmin-1:xmax] =1
-                # bbox.append([ymin - 1, xmin - 1, ymax - 1, xmax - 1])  # obey the rule of chainercv
+                bbox.append([ymin - 1, xmin - 1, ymax - 1, xmax - 1])  # obey the rule of chainercv
+                label.append(0) #class number
                 line = annotations.readline()
 
-        # bbox = np.stack(bbox).astype(np.float32)
+        bbox = np.stack(bbox).astype(np.float32)
+        label = np.stack(label).astype(np.int32)
 
-        return imgA, imgA_gt_map, imgB
+        return imgA, imgA_gt_map, imgB, bbox, label
 
     @property
     def len_A(self):
