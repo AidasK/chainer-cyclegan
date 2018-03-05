@@ -858,7 +858,7 @@ class Updater_SimGAN_gt_l1(chainer.training.StandardUpdater):
         self._buffer_x.serialize(serializer['buffer_x'])
         self._buffer_y.serialize(serializer['buffer_y'])
 
-class Updater_gt_l1_fs(chainer.training.StandardUpdater):
+class Updater_GT_L1_fs(chainer.training.StandardUpdater):
 
     def __init__(self, *args, **kwargs):
         self.gen_g, self.gen_f, self.dis_x, self.dis_y, self.fs = kwargs.pop('models')
@@ -882,7 +882,7 @@ class Updater_gt_l1_fs(chainer.training.StandardUpdater):
 
         self._buffer_x = HistoricalBuffer(self._max_buffer_size, self._image_size)
         self._buffer_y = HistoricalBuffer(self._max_buffer_size, self._image_size)
-        super(Updater_gt_l1_fs, self).__init__(*args, **kwargs)
+        super(Updater_GT_L1_fs, self).__init__(*args, **kwargs)
 
     def loss_func_rec_l1(self, x_out, t):
         return F.mean_absolute_error(x_out, t)

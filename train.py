@@ -71,7 +71,7 @@ def main():
     parser.add_argument("--reflect", type=int, choices = [0,1,2],default=2, help='reflect padding setting 0: no use, 1: at the beginning, 2: each time')
     # parser.add_argument("--norm_noaffine", action='store_true')
     # parser.add_argument("--norm_gnorm", action='store_true')
-    parser.add_argument("--method", type=str, default='default', choices=['default', 'SimGAN', 'GT_L1','SimGAN_GT_L1','GT_L1_Fs'],
+    parser.add_argument("--method", type=str, default='default', choices=['default', 'SimGAN', 'GT_L1','SimGAN_GT_L1','GT_L1_fs'],
                         help='updater method')
 
     parser.add_argument("--Fs_pretrained", type=str, help='model pretrained on source dataset')
@@ -117,7 +117,7 @@ def main():
     opt_x=make_adam(dis_x, lr=args.learning_rate_d, beta1=0.5)
     opt_y=make_adam(dis_y, lr=args.learning_rate_d, beta1=0.5)
 
-    if args.method in ["GT_L1","SimGAN_GT_L1","GT_L1_Fs"]:
+    if args.method in ["GT_L1","SimGAN_GT_L1","GT_L1_fs"]:
         dataset_class = datasets.source_target_dataset
     else:
         dataset_class = datasets.image_pairs_train
@@ -131,7 +131,7 @@ def main():
         test_dataset = datasets.image_pairs_train(args.data_test_x, args.data_test_y,
             resize_to=args.crop_to, crop_to=args.crop_to)
 
-    if args.method == 'GT_L1_Fs':
+    if args.method == 'GT_L1_fs':
         import sys
         sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)),'../DA_vehicle_detection'))
         from utils import initSSD
@@ -146,13 +146,13 @@ def main():
         updater_choice = Updater_gt_l1
     elif args.method == 'SimGAN_GT_L1':
         updater_choice = Updater_SimGAN_gt_l1
-    elif args.method == 'GT_L1_Fs':
-        updater_choice = Updater_gt_l1_fs
+    elif args.method == 'GT_L1_fs':
+        updater_choice = Updater_GT_L1_fs
     else:
         updater_choice = Updater
 
     models = (gen_g, gen_f, dis_x, dis_y)
-    if args.method in ['GT_L1_Fs']:
+    if args.method in ['GT_L1_fs']:
         models += (ssd_source,)
 
     params = {
@@ -167,9 +167,9 @@ def main():
             # 'cfmap_loss' : args.cfmap_loss,
             # 'lambda_cfmap' : args.lambda_cfmap,
         }
-    if args.method in ['GT_L1','GT_L1_Fs']:
+    if args.method in ['GT_L1','GT_L1_fs']:
         params["lambda_GT_L1"] = args.lambda_GT_L1
-    if args.method == 'GT_L1_Fs':
+    if args.method == 'GT_L1_fs':
         params["lambda_Fs"] = args.lambda_Fs
 
     updater = updater_choice(
