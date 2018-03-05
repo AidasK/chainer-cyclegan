@@ -876,7 +876,7 @@ class Updater_gt_l1_fs(chainer.training.StandardUpdater):
         loss_gen_gt_l1 = loss_gen_g_gt_l1 + loss_gen_f_gt_l1
 
         #fs loss
-        x_y_x_ = (x_y_x * 0.5 + 0.5)*255 - self.fs.mean
+        x_y_x_ = (x_y_x * 0.5 + 0.5)*255 - xp.asarray(self.fs.mean)
         self.alpha=1
         self.k=3
         mb_locs, mb_confs = self.fs(x_y_x_)
