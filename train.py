@@ -55,7 +55,7 @@ def main():
     parser.add_argument("--lambda2", type=float, default=1.0, help='lambda for adversarial loss')
     parser.add_argument("--lambda_idt", type=float, default=0.5, help='lambda for identity mapping loss')
     parser.add_argument("--lambda_GT_L1", type=float, default=10, help='lambda for L1 of GT')
-    parser.add_argument("--lambda_fs", type=float, default=10, help='lambda for fs loss')
+    parser.add_argument("--lambda_fs", type=float, default=1, help='lambda for fs loss')
 
     parser.add_argument("--bufsize", type=int, default=50, help='size of buffer')
 
