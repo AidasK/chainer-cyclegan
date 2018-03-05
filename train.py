@@ -3,6 +3,7 @@ import argparse
 
 from chainer import training
 from chainer.training import extensions
+import os
 
 import common.datasets as datasets
 from common.evaluation.visualization import *
