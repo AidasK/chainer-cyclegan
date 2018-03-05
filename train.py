@@ -55,7 +55,7 @@ def main():
     parser.add_argument("--lambda2", type=float, default=1.0, help='lambda for adversarial loss')
     parser.add_argument("--lambda_idt", type=float, default=0.5, help='lambda for identity mapping loss')
     parser.add_argument("--lambda_GT_L1", type=float, default=10, help='lambda for L1 of GT')
-    parser.add_argument("--lambda_Fs", type=float, default=10, help='lambda for Fs loss')
+    parser.add_argument("--lambda_fs", type=float, default=10, help='lambda for fs loss')
 
     parser.add_argument("--bufsize", type=int, default=50, help='size of buffer')
 
@@ -74,7 +74,7 @@ def main():
     parser.add_argument("--method", type=str, default='default', choices=['default', 'SimGAN', 'GT_L1','SimGAN_GT_L1','GT_L1_fs'],
                         help='updater method')
 
-    parser.add_argument("--Fs_pretrained", type=str, help='model pretrained on source dataset')
+    parser.add_argument("--fs_pretrained", type=str, help='model pretrained on source dataset')
 
     args = parser.parse_args()
     print(args)
@@ -135,7 +135,7 @@ def main():
         import sys
         sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)),'../DA_vehicle_detection'))
         from utils import initSSD
-        ssd_source = initSSD("ssd300",0.3,args.Fs_pretrained)
+        ssd_source = initSSD("ssd300",0.3,args.fs_pretrained)
         if args.gpu >= 0:
             ssd_source.to_gpu()
 
@@ -170,7 +170,7 @@ def main():
     if args.method in ['GT_L1','GT_L1_fs']:
         params["lambda_GT_L1"] = args.lambda_GT_L1
     if args.method == 'GT_L1_fs':
-        params["lambda_Fs"] = args.lambda_Fs
+        params["lambda_Fs"] = args.lambda_fs
 
     updater = updater_choice(
         models=models,
