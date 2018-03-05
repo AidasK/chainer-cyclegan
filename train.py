@@ -3,7 +3,6 @@ import argparse
 
 from chainer import training
 from chainer.training import extensions
-import os
 
 import common.datasets as datasets
 from common.evaluation.visualization import *
@@ -134,7 +133,6 @@ def main():
 
     if args.method == 'GT_L1_Fs':
         import sys
-        import os
         sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)),'../DA_vehicle_detection'))
         from utils import initSSD
         ssd_source = initSSD("ssd300",0.3,args.Fs_pretrained)
