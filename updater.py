@@ -790,6 +790,9 @@ class Updater_gt_l1_fs(chainer.training.StandardUpdater):
         self._lambda_GT_L1 = params["lambda_GT_L1"]
         self._lambda_fs = params["lambda_Fs"]
         self.xp = self.gen_g.xp
+        import copy
+        self.coder = copy.copy(self.fs.coder)
+        self.coder.to_cpu()
         # self._cfmap_loss = params['cfmap_loss']
         # self._lambda_cfmap = params['lambda_cfmap']
 
@@ -832,7 +835,7 @@ class Updater_gt_l1_fs(chainer.training.StandardUpdater):
         x_gt_maps = [xp.asarray(batch[i][1]) for i in range(batchsize)]
         y_images = [xp.asarray(batch[i][2]) for i in range(batchsize)]
 
-        gt_coded = [self.fs.coder.encode(batch[i][3],batch[i][4]) for i in range(batchsize)]
+        gt_coded = [self.coder.encode(batch[i][3],batch[i][4]) for i in range(batchsize)]
 
         x = xp.stack(x_images)
         x_gt_maps =xp.stack(x_gt_maps)
