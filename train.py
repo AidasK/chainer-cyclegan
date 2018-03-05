@@ -55,6 +55,7 @@ def main():
     parser.add_argument("--lambda2", type=float, default=1.0, help='lambda for adversarial loss')
     parser.add_argument("--lambda_idt", type=float, default=0.5, help='lambda for identity mapping loss')
     parser.add_argument("--lambda_GT_L1", type=float, default=10, help='lambda for L1 of GT')
+    parser.add_argument("--lambda_Fs", type=float, default=10, help='lambda for Fs loss')
 
     parser.add_argument("--bufsize", type=int, default=50, help='size of buffer')
 
@@ -70,8 +71,10 @@ def main():
     parser.add_argument("--reflect", type=int, choices = [0,1,2],default=2, help='reflect padding setting 0: no use, 1: at the beginning, 2: each time')
     # parser.add_argument("--norm_noaffine", action='store_true')
     # parser.add_argument("--norm_gnorm", action='store_true')
-    parser.add_argument("--method", type=str, default='default', choices=['default', 'SimGAN', 'GT_L1','SimGAN_GT_L1'],
+    parser.add_argument("--method", type=str, default='default', choices=['default', 'SimGAN', 'GT_L1','SimGAN_GT_L1','GT_L1_Fs'],
                         help='updater method')
+
+    parser.add_argument("--Fs_pretrained", type=str, help='model pretrained on source dataset')
 
     args = parser.parse_args()
     print(args)
@@ -114,7 +117,7 @@ def main():
     opt_x=make_adam(dis_x, lr=args.learning_rate_d, beta1=0.5)
     opt_y=make_adam(dis_y, lr=args.learning_rate_d, beta1=0.5)
 
-    if args.method in ["GT_L1","SimGAN_GT_L1"]:
+    if args.method in ["GT_L1","SimGAN_GT_L1","GT_L1_Fs"]:
         dataset_class = datasets.source_target_dataset
     else:
         dataset_class = datasets.image_pairs_train
@@ -128,6 +131,15 @@ def main():
         test_dataset = datasets.image_pairs_train(args.data_test_x, args.data_test_y,
             resize_to=args.crop_to, crop_to=args.crop_to)
 
+    if args.method == 'GT_L1_Fs':
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)),'../DA_vehicle_detection'))
+        from utils import initSSD
+        ssd_source = initSSD("ssd300",0.3,args.Fs_pretrained)
+        if args.gpu >= 0:
+            ssd_source.to_gpu()
+
     # Set up a trainer
     if args.method == "SimGAN":
         updater_choice = Updater_SimGAN
@@ -135,8 +147,14 @@ def main():
         updater_choice = Updater_gt_l1
     elif args.method == 'SimGAN_GT_L1':
         updater_choice = Updater_SimGAN_gt_l1
+    elif args.method == 'GT_L1_Fs':
+        updater_choice = Updater_gt_l1_fs
     else:
         updater_choice = Updater
+
+    models = (gen_g, gen_f, dis_x, dis_y)
+    if args.method in ['GT_L1_Fs']:
+        models += (ssd_source,)
 
     params = {
             'lambda1': args.lambda1,
@@ -150,11 +168,13 @@ def main():
             # 'cfmap_loss' : args.cfmap_loss,
             # 'lambda_cfmap' : args.lambda_cfmap,
         }
-    if args.method in ['GT_L1']:
+    if args.method in ['GT_L1','GT_L1_Fs']:
         params["lambda_GT_L1"] = args.lambda_GT_L1
+    if args.method == 'GT_L1_Fs':
+        params["lambda_Fs"] = args.lambda_Fs
 
     updater = updater_choice(
-        models=(gen_g, gen_f, dis_x, dis_y),
+        models=models,
         iterator={
             'main': train_iter,
             },
@@ -185,18 +205,21 @@ def main():
                 'gen_f/loss_adv', 'gen_g/loss_idt', 'gen_f/loss_idt', 'dis_x/loss', 'dis_y/loss']
     # if args.cfmap_loss != None:
     #     log_keys += ['loss_cfmap_X', 'loss_cfmap_Y']
+    if args.method in ["SimGAN",'SimGAN_GT_L1']:
+        log_keys += ['gen_g/loss_sim_l1']
+    if args.method in ["GT_L1","GT_L1_fs"]:
+        log_keys += ['gen_g/loss_gen_gt_l1', 'gen_f/loss_gen_gt_l1']
+    if args.method == "GT_L1_fs":
+        log_keys += ['gen_g/loss_fs']
 
     trainer.extend(extensions.LogReport(keys=log_keys, trigger=(20, 'iteration')))
     trainer.extend(extensions.PrintReport(log_keys), trigger=(20, 'iteration'))
     trainer.extend(extensions.ProgressBar(update_interval=50))
 
-    plotreport_keys = ['epoch', 'gen_g/loss_rec', 'gen_f/loss_rec', 'gen_g/loss_adv',
-                 'gen_f/loss_adv', 'gen_g/loss_idt', 'gen_f/loss_idt', 'dis_x/loss', 'dis_y/loss']
-
-    if args.method in ["SimGAN",'SimGAN_GT_L1']:
-        plotreport_keys += ['gen_g/loss_sim_l1']
-    if args.method == "GT_L1":
-        plotreport_keys += ['gen_g/loss_gen_gt_l1', 'gen_f/loss_gen_gt_l1']
+    import copy
+    plotreport_keys = log_keys[:]
+    plotreport_keys.remove("epoch")
+    plotreport_keys.remove("iteration")
 
     if extensions.PlotReport.available():
         trainer.extend(
