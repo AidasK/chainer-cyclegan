@@ -98,3 +98,6 @@ class source_target_dataset(datasets_base):
         imgB = cv2.cvtColor(imgB, cv2.COLOR_BGR2RGB)
         imgB = self.preprocess_image(imgB)
         return imgB
+
+    def get_filename_A(self,i):
+        return self.train_a_key[i % len(self.train_a_key)]
