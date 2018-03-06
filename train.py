@@ -50,6 +50,7 @@ def main():
 
     parser.add_argument("--resize_to", type=int, default=286, help='resize the image to')
     parser.add_argument("--crop_to", type=int, default=256, help='crop the resized image to')
+    parser.add_argument("--flip", type=int, default=0, choices = [0,1], help='flag of image flip')
 
     parser.add_argument("--lambda1", type=float, default=10.0, help='lambda for reconstruction loss')
     parser.add_argument("--lambda2", type=float, default=1.0, help='lambda for adversarial loss')
@@ -123,7 +124,7 @@ def main():
         dataset_class = datasets.image_pairs_train
 
     train_dataset = dataset_class(args.data_train_x, args.data_train_y,
-            resize_to=args.resize_to, crop_to=args.crop_to)
+            resize_to=args.resize_to, crop_to=args.crop_to, flip=args.flip)
     train_iter = chainer.iterators.MultiprocessIterator(
         train_dataset, args.batchsize, n_processes=4)
 
